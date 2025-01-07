@@ -26,19 +26,8 @@ DATABASE = Path(__file__).resolve().parent.joinpath('data', 'chat_history.db')
 
 st.set_page_config(page_title="南亞塑膠生成式AI")
 
-with open('login_config.yaml') as file:
-    config = yaml.load(file, Loader=SafeLoader)
 
-authenticator = stauth.Authenticate(
-    config['credentials'],
-    config['cookie']['name'],
-    config['cookie']['key'],
-    config['cookie']['expiry_days'],
-    config['pre-authorized']
-)
 
-def login_page():
-    authenticator.login(fields={'Form name':'Login', 'Username':'Username', 'Password':'Password'})
 
 def main_page():
     st.title("南亞塑膠生成式AI")
