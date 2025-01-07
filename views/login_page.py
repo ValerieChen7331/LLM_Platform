@@ -12,8 +12,7 @@ class LoginPage:
         """加載配置文件並返回配置字典。"""
         try:
             with open(file_path, 'r') as file:
-                config = yaml.load(file, Loader=SafeLoader)
-            return config
+                return yaml.load(file, Loader=SafeLoader)
         except FileNotFoundError:
             st.error("配置文件未找到，請確認文件路徑。")
             st.stop()
@@ -37,15 +36,16 @@ class LoginPage:
 
     def run(self):
         """運行登錄邏輯。"""
-        self.authenticator.login(fields={'Form name':'Login', 'Username':'Username', 'Password':'Password'})
-
+        self.authenticator.login(fields={'Form name': 'Login', 'Username': 'Username', 'Password': 'Password'})
         authentication_status = st.session_state.get("authentication_status")
 
         if authentication_status:
+            st.session_state['logged_in'] = True
             return True
         elif authentication_status is False:
-            st.error('Username/password is incorrect')
-            return False
+            st.error('用戶名或密碼不正確')
         else:
-            st.warning('Please enter your username and password')
-            return False
+            st.warning('請輸入用戶名和密碼')
+
+        st.session_state['logged_in'] = False
+        return False

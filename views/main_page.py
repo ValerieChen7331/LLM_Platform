@@ -1,12 +1,13 @@
 import streamlit as st
 from controllers.ui_controller import UIController
 from services.llm_services import LLMService
-
+from models.database_model import UserRecordsDB
 
 class MainPage:
     def __init__(self):
         self.controller = UIController()
         self.llm_service = LLMService()
+        self.user_records_db = UserRecordsDB()
 
     def configure_page(self):
         # 設定頁面標題
@@ -32,28 +33,6 @@ class MainPage:
                 }}
                 div.stButton > button:hover {{
                     background-color: #e0e0e0;
-                }}
-            </style>
-            """, unsafe_allow_html=True)
-
-    def submit_button_style(self):
-        # 提交按鈕樣式
-        st.markdown(f"""
-            <style>
-                div.stButton > button.submit-button {{
-                    background-color: #ffffff;
-                    border: 1px solid #d4d4d4;
-                    border-radius: 5px;
-                    color: #000;
-                    font-weight: bold;
-                    margin: 5px 0;
-                    padding: 5px 10px;
-                    width: auto;
-                    text-align: center;
-                }}
-                div.stButton > button.submit-button:hover {{
-                    background-color: #f0f0f0;
-                    border-color: #c0c0c0;
                 }}
             </style>
             """, unsafe_allow_html=True)
@@ -113,7 +92,6 @@ class MainPage:
         for current_index in range(count_chat_windows):
             # 獲取聊天標題
             chat_title = self.controller.get_title(current_index)
-            print(chat_title)
 
             # 創建選擇和刪除按鈕的列
             chat_window, delete_button = st.columns([4, 1])
@@ -135,20 +113,31 @@ class MainPage:
                 st.rerun()
 
     def display_chat_history(self):
-        # 顯示聊天記錄
-        chat_records = self.controller.get_chat_history()
+        """顯示聊天記錄"""
+        self.user_records_db.get_chat_history()
+        # 取得聊天記錄
+        chat_records = st.session_state.get('chat_history', [])
+
         if chat_records:
+            # 迭代每一條聊天記錄並顯示
             for result in chat_records:
                 with st.chat_message("user"):
-                    st.markdown(f"{result[0]}")
+                    st.markdown(f"{result['user_query']}")
                 with st.chat_message("ai"):
-                    st.markdown(f"{result[1]}")
+                    st.markdown(f"{result['ai_response']}")
+        else:
+            pass
 
     def display_messages(self):
         # 顯示消息
         for message in st.session_state.get('messages', []):
             st.chat_message('user').write(message[0])
             st.chat_message('ai').write(message[1])
+
+    def logout(self):
+        st.session_state['logged_in'] = False
+        st.experimental_set_query_params(page="login")
+        st.experimental_rerun()
 
     def show_main_page(self):
         # 顯示主頁面
@@ -164,6 +153,7 @@ class MainPage:
             self.controller.handle_query(query)
         self.display_messages()
 
+        st.sidebar.button("Logout", on_click=self.logout)
 
 def main():
     # 主函數

@@ -1,6 +1,6 @@
 from services.llm_services import LLMService
 from services.document_services import DocumentService
-from models.database_model import UserRecordsDB
+from models.database_model import DatabaseModel
 import streamlit as st
 import uuid
 import pandas as pd
@@ -11,11 +11,11 @@ class UIController:
         # 初始化 LLMService 和 DocumentService
         self.llm_service = LLMService()
         self.doc_service = DocumentService()
-        self.user_records_db = UserRecordsDB()  # 修正为 UserRecordsDB
+        self.database_model = DatabaseModel()
 
     def initialize_session_state(self):
         # 初始化 session 狀態
-        database = self.user_records_db.load_database()  # 使用 user_records_db 而非 database_model
+        database = self.database_model.load_database()
 
         if not database.empty:
             # 計算聊天窗口的數量並設置 session state
@@ -42,7 +42,7 @@ class UIController:
 
     def get_title(self, current_chat_window_index):
         # 從資料庫加載數據
-        df_database = self.user_records_db.load_database()  # 使用 user_records_db 而非 database_model
+        df_database = self.database_model.load_database()
 
         # 過濾出匹配 current_chat_window_index 的行
         df_window = df_database[df_database['chat_window_index'] == current_chat_window_index]
@@ -52,7 +52,7 @@ class UIController:
             title = df_window['title'].iloc[0]
         else:
             # 若未找到匹配的行，設置默認標題
-            title = "(新對話)"
+            title = f"(新對話)"
         return title
 
     def new_chat(self):
@@ -62,19 +62,21 @@ class UIController:
         st.session_state['chat_window_index'] += 1
         st.session_state['current_chat_window_index'] = st.session_state['chat_window_index']
 
+
+
     def delete_chat_history_and_update_indexes(self, delete_index):
         # 刪除指定聊天窗口索引的聊天歷史記錄
-        self.user_records_db.execute_query(  # 使用 user_records_db 而非 database_model
+        self.database_model.execute_query(
             "DELETE FROM chat_history WHERE chat_window_index = ?", (delete_index,))
 
         # 更新剩餘聊天窗口的索引
-        chat_histories = self.user_records_db.fetch_query(  # 使用 user_records_db 而非 database_model
+        chat_histories = self.database_model.fetch_query(
             "SELECT id, chat_window_index FROM chat_history ORDER BY chat_window_index")
 
         for id, chat_window_index in chat_histories:
             if chat_window_index > delete_index:
                 new_index = chat_window_index - 1
-                self.user_records_db.execute_query(  # 使用 user_records_db 而非 database_model
+                self.database_model.execute_query(
                     "UPDATE chat_history SET chat_window_index = ? WHERE id = ?", (new_index, id))
 
         # 更新 session state 中的聊天窗口索引
@@ -85,6 +87,7 @@ class UIController:
         st.chat_message("human").write(query)
         response = self.llm_service.query(query)
         st.chat_message("ai").write(response)
+
 
     def process_uploaded_documents(self):
         # 處理上傳的文件

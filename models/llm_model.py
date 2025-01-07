@@ -5,14 +5,13 @@ from langchain.prompts import PromptTemplate
 
 from apis.llm_api import LLMAPI
 from apis.file_paths import FilePaths
-from models.database_model import DatabaseModel
+
 
 class LLMModel:
     def __init__(self):
         # 初始化文件路徑和資料庫模型
         self.file_paths = FilePaths()
         self.output_dir = self.file_paths.get_output_dir()
-        self.database_model = DatabaseModel()
 
         # 獲取會話狀態中的模型、API 基本 URL 和 API 金鑰
         self.model = st.session_state.get('model')
@@ -39,16 +38,11 @@ class LLMModel:
         try:
             llm = LLMAPI.get_llm()
             prompt_template = self._get_llm_direct_prompt()
-            chat_history = st.session_state.get('messages', [])
+            # !!修改 chat_history!
+            chat_history = []
             formatted_prompt = prompt_template.format(query=query, chat_history=chat_history)
 
             response = llm.invoke(formatted_prompt)
-
-            if not chat_history:
-                st.session_state['title'] = self.set_window_title(query)
-
-            self.save_to_database(query, response)
-
             return response
 
         except Exception as e:
@@ -64,17 +58,14 @@ class LLMModel:
                 combine_docs_chain_kwargs={"prompt": self._get_rag_prompt()}
             )
 
-            chat_history = st.session_state.get('messages', [])
+            # !!修改 chat_history!
+            chat_history = []
             result_rag = qa_chain.invoke({'question': query, 'chat_history': chat_history})
 
             response = result_rag.get('answer', '')
             retrieved_documents = result_rag.get('source_documents', [])
 
-            if not chat_history:
-                st.session_state['title'] = self.set_window_title(query)
-
             self._save_retrieved_data_to_csv(query, retrieved_documents, response)
-            self.save_to_database(query, response)
             return response, retrieved_documents
 
         except Exception as e:
@@ -86,7 +77,7 @@ class LLMModel:
         根據以下提問(Q:)，列出1個關鍵字(A:)。請務必遵守以下規則：
         1.只能輸出關鍵字，不要有其他說明。
         2.若使用者的提問字數少於5，直接輸出提問。
-        3.若提問字數超過5，請挑選其中最重要的關鍵字輸出。
+        3.輸出字數12字以內。
         ---
         範例: 
         Q:如果有超過一個月的出勤獎勵，該如何計算？
@@ -136,25 +127,6 @@ class LLMModel:
             combined_df = new_df
 
         combined_df.to_csv(output_file, index=False, encoding='utf-8-sig')
-
-    def save_to_database(self, query, response):
-        """將查詢結果保存到資料庫中。"""
-        mode = st.session_state['mode']
-        model = st.session_state['model']
-        current_chat_window_index = st.session_state['current_chat_window_index']
-        title = st.session_state['title']
-
-        self.database_model.execute_query(
-            """
-            INSERT INTO chat_history 
-            (conversation_id, mode, model, chat_window_index, user_query, ai_response, title) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                st.session_state['conversation_id'], mode, model,
-                current_chat_window_index, query, response, title
-            )
-        )
 
     def _handle_error(self, message):
         """處理並顯示錯誤信息。"""
