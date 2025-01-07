@@ -1,0 +1,6 @@
+# 為所有文件使用 LF
+* text eol=lf
+
+# 為特定類型文件使用 CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
