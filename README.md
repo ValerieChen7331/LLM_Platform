@@ -3,21 +3,17 @@ project/
 ├── app.py                             # 主應用程序，負責配置頁面和初始化控制器
 │
 ├── controllers/                       # 控制器層，負責處理用戶輸入和調用服務
-│   ├── __init__.py                    # 用於標識這是個包
 │   ├── ui_controller.py               # UI 控制器
 │
 ├── services/                           # 服務層，包含業務邏輯和與模型的交互
-│   ├── __init__.py                     # 用於標識這是個包
 │   ├── document_services.py            # 文件服務
 │   ├── llm_services.py                 # LLM 服務
 │
 ├── models/                            # 模型層，處理數據操作和邏輯
-│   ├── __init__.py                    # 用於標識這是個包
 │   ├── document_model.py              # 文件模型
 │   ├── llm_model.py                   # LLM 模型
 │
 ├── apis/                              # API 層，負責與外部服務進行交互
-│   ├── __init__.py                    # 用於標識這是個包
 │   ├── llm_api.py                     # LLM API
 │   ├── embedding_api.py               # 嵌入 API
 │   ├── file_paths.py                  # 文件路徑和數據儲存處理

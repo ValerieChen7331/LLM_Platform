@@ -1,8 +1,7 @@
 import logging
 import tempfile
 import streamlit as st
-from pathlib import Path
-import pandas as pd
+
 from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
@@ -10,20 +9,19 @@ from langchain.schema.document import Document
 from apis.file_paths import FilePaths
 from apis.embedding_api import EmbeddingAPI
 
+# 設定日誌記錄的級別為 INFO
 logging.basicConfig(level=logging.INFO)
 
 class DocumentModel:
     def __init__(self):
+        # 初始化文件路徑和嵌入函數
         self.file_paths = FilePaths()
-        self.tmp_dir, self.vector_store_dir, self.output_dir = self.file_paths.get_doc_paths()
-        self.embedding_function = EmbeddingAPI.get_embedding_function("http://10.5.61.81:11435", "llama3")
-
-    def validate_api_credentials(self):
-        api_base = st.session_state.get('api_base', None)
-        api_key = st.session_state.get('api_key', None)
-        return api_base and api_key
+        self.tmp_dir = self.file_paths.get_tmp_dir()
+        self.vector_store_dir = self.file_paths.get_local_vector_store_dir()
+        self.embedding_function = EmbeddingAPI.get_embedding_function()
 
     def create_temporary_files(self):
+        # 建立臨時文件
         self.tmp_dir.mkdir(parents=True, exist_ok=True)
         temporary_files = []
         for source_docs in st.session_state.get('source_docs', []):
@@ -35,6 +33,7 @@ class DocumentModel:
         return temporary_files
 
     def load_documents(self):
+        # 加載 PDF 文件
         loader = PyPDFDirectoryLoader(self.tmp_dir.as_posix(), glob='**/*.pdf')
         documents = loader.load()
         if not documents:
@@ -43,6 +42,7 @@ class DocumentModel:
         return documents
 
     def delete_temporary_files(self):
+        # 刪除臨時文件
         for file in self.tmp_dir.iterdir():
             try:
                 logging.info(f"Deleting temporary file: {file}")
@@ -51,9 +51,10 @@ class DocumentModel:
                 logging.error(f"Error deleting file {file}: {e}")
 
     def split_documents_into_chunks(self, documents):
+        # 將文件拆分成塊
         text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=400,
-            chunk_overlap=200,
+            chunk_size=200,
+            chunk_overlap=100,
             length_function=len
         )
         document_chunks = text_splitter.split_documents(documents)
@@ -61,6 +62,7 @@ class DocumentModel:
         return document_chunks
 
     def embeddings_on_local_vectordb(self, document_chunks):
+        # 將文檔塊嵌入本地向量數據庫，並返回檢索器設定
         if not document_chunks:
             raise ValueError("No document chunks to embed. Please check the text splitting process.")
         vector_db = Chroma.from_documents(

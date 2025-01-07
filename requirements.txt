@@ -1,10 +1,2 @@
-langchain
-streamlit
-unstructured
-unstructured[pdf]
-# openai
-chromadb
-# tiktoken
-sentence-transformers 
-langchain-community
-langchain-openai
+yaml==6.0.1
+streamlit_authenticator==0.3.2

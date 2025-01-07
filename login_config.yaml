@@ -1,0 +1,21 @@
+credentials:
+  usernames:
+    test:
+      email: 
+      failed_login_attempts: 0 # Will be managed automatically
+      logged_in: False # Will be managed automatically
+      name: Tester 
+      password: t123 # Will be hashed automatically
+    danielhua:
+      email: danielhua@npc.com.tw
+      failed_login_attempts: 0 # Will be managed automatically
+      logged_in: False # Will be managed automatically
+      name: Daniel Hua
+      password: Notes0827 # Will be hashed automatically
+cookie:
+  expiry_days: 1.0
+  key: vwwL6gZLx9zdzhpaf0Ra3A # Must be string
+  name: _streamlit_xsrf
+pre-authorized:
+  emails:
+  - melsby@gmail.com
