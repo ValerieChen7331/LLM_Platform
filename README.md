@@ -28,7 +28,7 @@ project/
 ├── views/                             # 視圖層，負責頁面顯示和用戶互動
 │   ├── login_page.py                  # 登錄頁面
 │   ├── main_page.py                   # 主頁面
-
+```
 
 ## 詳細說明
 
