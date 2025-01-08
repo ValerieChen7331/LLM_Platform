@@ -26,18 +26,21 @@ class LoginPage:
 
     def run(self):
         """執行登入頁面邏輯"""
-        # 顯示登入介面，讓使用者登入
-        self.authenticator.login()
+        self.authenticator.login(fields={
+            'Form name': '登入',
+            'Username': '帳號',
+            'Password': '密碼',
+            'Login': '登入'
+        })
 
-        if st.session_state['authentication_status']:
-            # 執行 main_page
+        if st.session_state.get('authentication_status'):
             return True
 
-        elif st.session_state['authentication_status'] is False:
+        elif st.session_state.get('authentication_status') is False:
             # 驗證失敗，顯示錯誤訊息
             st.error('用戶名或密碼錯誤')
             return False
-        elif st.session_state['authentication_status'] is None:
+        elif st.session_state.get('authentication_status') is None:
             # 尚未輸入用戶名或密碼，顯示警告訊息
             st.warning('請輸入用戶名和密碼')
             return False

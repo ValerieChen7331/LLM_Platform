@@ -61,6 +61,7 @@ class DocumentModel:
         logging.info(f"Split documents into {len(document_chunks)} chunks")
         return document_chunks
 
+
     def embeddings_on_local_vectordb(self, document_chunks):
         # 將文檔塊嵌入本地向量數據庫，並返回檢索器設定
         if not document_chunks:
@@ -72,4 +73,5 @@ class DocumentModel:
         )
         logging.info(f"Persisted vector DB at {self.vector_store_dir}")
         retriever = vector_db.as_retriever(search_kwargs={'k': 3})
+
         return retriever

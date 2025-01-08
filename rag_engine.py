@@ -2,7 +2,7 @@ import streamlit as st
 from views.login_page import LoginPage
 from views.main_page import MainPage
 
-# 設定 Streamlit 頁面配置，這應該是第一個調用的 Streamlit 命令
+# 設定 Streamlit 頁面配置
 st.set_page_config(page_title="南亞塑膠GenAI")
 
 def main():
@@ -14,7 +14,7 @@ def main():
     if login_page.run():
         # 創建主頁面物件並顯示主頁面
         main_page = MainPage()
-        main_page.show()  # 確認使用正確的方法名稱
+        main_page.show()
 
 if __name__ == "__main__":
     # 執行主函數
