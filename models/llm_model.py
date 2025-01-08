@@ -1,11 +1,17 @@
 import streamlit as st
 import pandas as pd
 from langchain.chains import ConversationalRetrievalChain
+from langchain_community.vectorstores import Chroma
+from langchain.chains import ConversationChain
+from langchain.prompts import ChatPromptTemplate
+from langchain.memory import ConversationBufferMemory
+# from langchain_chroma import Chroma
 from langchain.prompts import PromptTemplate
 import logging
 
 from apis.llm_api import LLMAPI
 from apis.file_paths import FilePaths
+from apis.embedding_api import EmbeddingAPI
 
 
 class LLMModel:
@@ -13,6 +19,8 @@ class LLMModel:
         # 初始化文件路徑和資料庫模型
         self.file_paths = FilePaths()
         self.output_dir = self.file_paths.get_output_dir()
+        self.vector_store_dir = self.file_paths.get_local_vector_store_dir()
+        self.embedding_function = EmbeddingAPI.get_embedding_function()
 
         # 獲取會話狀態中的模型、API 基本 URL 和 API 金鑰
         self.model = st.session_state.get('model')
@@ -23,7 +31,7 @@ class LLMModel:
         """使用 LLM 根據用戶的查詢設置窗口標題。"""
         try:
             llm = LLMAPI.get_llm()          # 獲取 LLM API 物件
-            prompt_template = self._get_title_prompt()   # 獲取prompt模板
+            prompt_template = self._title_prompt()   # 獲取prompt模板
             formatted_prompt = prompt_template.format(query=query)  # 格式化prompt模板，插入query
 
             title = llm.invoke(formatted_prompt)    # 調用 LLM 生成 window title
@@ -33,11 +41,11 @@ class LLMModel:
         except Exception as e:
             return self._handle_error(f"查詢 set_window_title 時發生錯誤: {e}")
 
-    def query_llm_direct(self, query):
+    def query_llm_direct_1(self, query):
         """直接查詢 LLM 並返回結果。"""
         try:
             llm = LLMAPI.get_llm()  # 獲取 LLM API 物件
-            prompt_template = self._get_llm_direct_prompt()   # 獲取prompt模板
+            prompt_template = self._llm_direct_prompt()   # 獲取prompt模板
 
             # !!修改 chat_history!
             chat_history = []
@@ -50,14 +58,46 @@ class LLMModel:
         except Exception as e:
             return self._handle_error(f"查詢 query_llm_direct 時發生錯誤: {e}")
 
-    def query_llm_rag(self, retriever, query):
+    def query_llm_direct(self, query):
+        """直接查詢 LLM 並返回結果。"""
+        st.session_state['message'] = st.session_state['chat_history']
+
+        if 'conversation_memory' not in st.session_state:
+            st.session_state['conversation_memory'] = ConversationBufferMemory()
+        print(st.session_state['conversation_memory'].to_json)
+
+        try:
+            llm = LLMAPI.get_llm()  # 獲取 LLM API 物件
+            prompt_template = self._llm_direct_prompt()  # 獲取 prompt 模板
+
+            # Create the conversation chain with memory
+            conversation_chain = ConversationChain(
+                llm=llm,
+                memory=st.session_state['conversation_memory'],
+                prompt=ChatPromptTemplate.from_template(prompt_template.template)
+            )
+
+            response = conversation_chain.predict(input=query)
+            #st.session_state.messages.append((query, response))
+            return response
+
+        except Exception as e:
+            return self._handle_error(f"查詢 query_llm_direct 時發生錯誤: {e}")
+
+    def query_llm_rag(self, query):
         """使用 RAG 查詢 LLM，根據給定的問題和檢索的文件內容返回答案。"""
         try:
+            # 建立向量資料庫和檢索器
+            vector_db = Chroma(
+                embedding_function=self.embedding_function,
+                persist_directory=self.vector_store_dir.as_posix()
+            )
+            retriever = vector_db.as_retriever(search_kwargs={'k': 3})
             qa_chain = ConversationalRetrievalChain.from_llm(
                 llm=LLMAPI.get_llm(),        # 獲取 LLM API 物件
                 retriever=retriever,         # 設置檢索器
                 return_source_documents=True,   # 返回檢索到的文件
-                combine_docs_chain_kwargs={"prompt": self._get_rag_prompt()}   # prompt 模板
+                combine_docs_chain_kwargs={"prompt": self._rag_prompt()}   # prompt 模板
             )
 
             # !!修改 chat_history!
@@ -75,7 +115,7 @@ class LLMModel:
         except Exception as e:
             return self._handle_error(f"查詢 query_llm_rag 時發生錯誤: {e}"), []
 
-    def _get_title_prompt(self):
+    def _title_prompt(self):
         """生成設置窗口標題所需的提示模板。"""
         template = """
         根據以下提問(Q:)，列出1個關鍵字(A:)。請務必遵守以下規則：
@@ -91,17 +131,27 @@ class LLMModel:
         """
         return PromptTemplate(input_variables=["query"], template=template)
 
-    def _get_llm_direct_prompt(self):
+    def _llm_direct_prompt_1(self):
         """生成直接查詢 LLM 所需的提示模板。"""
         template = """
         若無特別說明，請使用繁體中文來回答。
-        歷史紀錄越下面是越新的，若需參考歷史紀錄，請以較新的問答為優先。
+        若需參考歷史紀錄，請以較新的問答為優先。
         問答歷史紀錄: {chat_history}
         問題: {query}
         """
         return PromptTemplate(input_variables=["query", "chat_history"], template=template)
 
-    def _get_rag_prompt(self):
+    def _llm_direct_prompt(self):
+        """生成直接查詢 LLM 所需的提示模板。"""
+        template = """
+        若無特別說明，請使用繁體中文來回答。
+        若需參考歷史紀錄，請以較新的問答為優先。
+        問答歷史紀錄: {history}
+        問題: {input}
+        """
+        return PromptTemplate(input_variables=["input", "history"], template=template)
+
+    def _rag_prompt(self):
         """生成 RAG 查詢 LLM 所需的提示模板。"""
         template = """
         請根據「文件內容」回答問題。如果以下資訊不足，請如實告知，勿自行編造!

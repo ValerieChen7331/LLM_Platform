@@ -11,17 +11,17 @@ class MainPage:
         self.userRecords_db = UserRecordsDB()
         self.sidebar = Sidebar(self.controller)
         self.main_content = MainContent(self.controller, self.userRecords_db)
+        self.controller.initialize_session_state()  # 初始化 session state
 
     def show(self):
         """顯示主頁面"""
         print('main page')
-        self.controller.initialize_session_state()  # 初始化 session state
         self.sidebar.display()       # 顯示側邊欄
         self.main_content.display()  # 顯示主內容
 
-        if query := st.chat_input():        # 如果使用者在聊天框中輸入了內容
-            self.controller.handle_query(query)         # 透過控制器處理使用者的查詢
-        self.main_content.display_active_messages()     # 顯示用戶與 AI 之間的消息
+        if query := st.chat_input():                # 如果使用者在聊天框中輸入了內容
+            self.controller.handle_query(query)     # 處理使用者的查詢
+
 
 def main():
     """主函數"""

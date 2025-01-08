@@ -1,10 +1,12 @@
 import streamlit as st
 from models.batabase_userRecords import UserRecordsDB
+from models.document_model import DocumentModel
 class Sidebar:
     def __init__(self, controller):
         """初始化側邊欄物件"""
         self.controller = controller
-        self.userRecords_db = UserRecordsDB()   # 初始化用戶記錄資料庫物件
+        self.userRecords_db = UserRecordsDB()
+        self.document_model = DocumentModel()
 
     def display(self):
         """顯示側邊欄"""
@@ -43,12 +45,21 @@ class Sidebar:
             </style>
         """, unsafe_allow_html=True)  # 使用 HTML 和 CSS 設定按鈕樣式
 
+    def _display_new_chat_button(self):
+        """顯示新聊天按鈕"""
+        with st.sidebar:
+            if st.button("New Chat"):
+                st.session_state['agent'] = '一般助理'
+                # 點擊按鈕後，啟動新的聊天
+                self.controller.new_chat()
+
+
     def _display_agent_selection(self):
         """顯示助理類型選擇與資料庫選擇"""
         with st.sidebar:
             st.title("Agent")
 
-            current_agent = st.session_state.get('agent', '一般助理')   # 取得當前的助理類型
+            current_agent = st.session_state.get('agent')   # 取得當前的助理類型
             agent_options = ['一般助理', '個人KM', '資料庫查找助理', '資料庫查找助理2.0', 'SQL生成助理']
             selected_agent_index = agent_options.index(current_agent)   # 取得當前助理類型在選項中的索引位置
 
@@ -70,15 +81,16 @@ class Sidebar:
 
     def _display_database_selection(self):
         """根據選擇的助理類型顯示資料庫選項"""
-        options = ["Oracle", "MSSQL", "SQLITE"]
+        db_source_options = ["Oracle", "MSSQL", "SQLITE"]
 
         # 使用已保存的值作為預設值（如果存在且有效）
         try:
-            db_source_index = options.index(st.session_state.get('db_source', options[0]))
+            # 取得索引位置
+            db_source_index = db_source_options.index(st.session_state.get('db_source',  db_source_options[0]))
         except ValueError:
             db_source_index = 0  # 如果不存在於列表中，使用第一個作為預設值
 
-        db_source = st.sidebar.selectbox('選擇資料來源:', options, index=db_source_index)
+        db_source = st.sidebar.selectbox('選擇資料來源:',  db_source_options, index=db_source_index)
         st.session_state['db_source'] = db_source
 
         # 根據選擇的資料來源設定資料庫選項
@@ -93,6 +105,7 @@ class Sidebar:
 
         # 使用已保存的值作為預設值（如果存在且有效）
         try:
+            # 取得索引位置
             db_name_index = db_options.index(st.session_state.get('db_name', db_options[0]))
         except ValueError:
             db_name_index = 0  # 如果不存在於列表中，使用第一個作為預設值
@@ -100,24 +113,31 @@ class Sidebar:
         db_name = st.sidebar.selectbox('選擇資料庫:', db_options, index=db_name_index)
         st.session_state['db_name'] = db_name
 
-    def _display_new_chat_button(self):
-        """顯示新聊天按鈕"""
-        with st.sidebar:
-            if st.button("New Chat"):
-                # 點擊按鈕後，啟動新的聊天
-                self.controller.new_chat()
-
     def _display_llm_selection(self):
         """顯示 LLM 模式選項"""
         with st.sidebar:
             st.title("LLM 選項")
-            new_mode = st.radio("LLM 類型：", ('內部LLM', '外部LLM'))
-            st.session_state['mode'] = new_mode
 
-            if new_mode == '內部LLM':
-                options = ["Llama-3-8b", "taiwan-llama-3-8b", "taiwan-llm-13b", "gemma2-9b-chinese"]
-                st.session_state['option'] = st.selectbox('選擇一個選項：', options)
+            # 顯示 LLM 模式選擇的單選按鈕
+            mode = st.radio("LLM 類型：", ('內部LLM', '外部LLM'))
+            st.session_state['mode'] = mode
+
+            if mode == '內部LLM':
+                # 定義內部 LLM 的選項
+                options = ["Qwen2-Alibaba", "Taiwan-llama3-8b", "Taiwan-llama2-13b"]
+
+                # 使用已保存的 LLM 選項作為預設值，如果存在且有效
+                try:
+                    # 取得當前選項在列表中的索引位置
+                    selected_index = options.index(st.session_state.get('llm_option', options[0]))
+                except ValueError:
+                    selected_index = 0  # 如果選項無效，使用第一個作為預設值
+
+                # 顯示選擇框，並更新 session state
+                llm_option = st.selectbox('選擇一個選項：', options, index=selected_index)
+                st.session_state['llm_option'] = llm_option
             else:
+                # 如果選擇外部 LLM，顯示 API 設置選項
                 st.session_state['api_base'] = st.text_input('API 地址：', type='password')
                 st.session_state['api_key'] = st.text_input('API 密鑰：', type='password')
 
@@ -126,33 +146,44 @@ class Sidebar:
         with st.sidebar:
             st.title("聊天記錄")
             # 取得目前的聊天窗口數量
-            num_chat_windows = st.session_state.get('num_chat_windows')
+            total_windows = st.session_state.get('num_chat_windows')
 
-            for index in range(num_chat_windows):
+            for index in range(total_windows):
                 chat_title = self.controller.get_title(index)   # 取得聊天窗口的標題
                 chat_window, delete_button = st.columns([4, 1]) # 設置標題和刪除按鈕
 
                 # 點擊 window, 回到過去聊天紀錄的設定
                 if chat_window.button(chat_title, key=f'chat_window_select_{index}'):
                     st.session_state['active_window_index'] = index
-                    self.userRecords_db.get_active_window_setup(index)  # 取得聊天窗口設定
-                    st.rerun()  # 重新執行應用程式
+                    self._update_window_setup()
 
                 if delete_button.button("X", key=f'chat_delete_{index}'):
-                    if index == 0 and num_chat_windows == 0:
-                        break
-                    else:
-                        self.controller.delete_chat_history_and_update_indexes(index)   # 刪除聊天記錄並更新索引
-                        self._update_active_window_index(index, num_chat_windows)   # 更新目前活動的窗口索引
-                    st.rerun()
+                    # 刪除聊 vector DB
+                    #deleted_agent = self.userRecords_db.get_agent(index)
+                    #deleted_conversation_id = self.userRecords_db.get_conversation_id(index)
+                    #if deleted_agent == '個人KM':
+                    #    self.userRecords_db.delete_vector_db(index, deleted_conversation_id)
+
+                    # 刪除聊天記錄並更新索引
+                    self.controller.delete_chat_history_and_update_indexes(index)
+                    # 更新目前活動的窗口索引
+                    self._update_active_window_index(index, total_windows)
+                    self._update_window_setup()
 
     def _update_active_window_index(self, deleted_index, total_windows):
         """更新目前視窗索引"""
         active_window_index = st.session_state.get('active_window_index')
-
+        # 如果刪除的窗口在當前窗口前，則將索引 -1
         if active_window_index > deleted_index:
             st.session_state['active_window_index'] -= 1
-
         # 如果刪除的窗口就是當前活動窗口，則將索引設為最後一個窗口
         elif active_window_index == deleted_index:
             st.session_state['active_window_index'] = total_windows - 1
+
+    def _update_window_setup(self):
+        index = st.session_state.get('active_window_index')
+        self.userRecords_db.get_active_window_setup(index)  # 取得聊天窗口設定
+        st.rerun()  # 重新執行應用程
+
+
+

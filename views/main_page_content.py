@@ -15,15 +15,24 @@ class MainContent:
 
     def _configure_page(self):
         """配置主頁面標題"""
-        st.title("南亞塑膠-生成式AI")
-        st.write(f'Welcome *{st.session_state["name"]}*')
-
+        st.title("南亞塑膠生成式AI")
+        st.write(f'*Welcome {st.session_state["name"]}*')
 
     def _display_input_fields(self):
         """顯示文件上傳欄位，僅當選擇 '個人KM' 時顯示"""
         # 只在 '個人KM' 時執行
         if st.session_state.get('agent') == '個人KM':
+            # 顯示文件上傳欄位，允許上傳多個 PDF 文件
             st.session_state['source_docs'] = st.file_uploader(label="上傳文檔", type="pdf", accept_multiple_files=True)
+
+            # 檢查是否有上傳文件且確保 source_docs 是一個列表
+            if st.session_state['source_docs']:
+                # 獲取所有上傳文件的名稱列表
+                doc_names = [doc.name for doc in st.session_state['source_docs']]
+                st.session_state['doc_names'] = str(doc_names)  # 儲存文件名稱列表到 session state
+                print(doc_names)  # 調試用 (在生產環境中建議使用 logging 代替)
+
+            # 顯示提交按鈕，點擊時觸發 process_uploaded_documents 方法
             st.button("提交文件", on_click=self.controller.process_uploaded_documents, key="submit", help="提交文件")
 
     def _display_sql_example(self):
@@ -33,7 +42,6 @@ class MainContent:
         selected_agent = st.session_state.get('agent')
 
         if selected_agent not in ['一般助理', '個人KM']:
-
             # 顯示 Oracle 資料庫的輸入範例
             if db_source == "Oracle":
                 st.write('輸入範例1：v2nbfc00_xd_QMS table, 尋找EMPID=N000175896的TEL')
@@ -53,9 +61,8 @@ class MainContent:
     def _display_active_chat_history(self):
         """顯示聊天記錄"""
         # 從user資料庫中取得聊天記錄
-        self.userRecords_db.get_chat_history()
+        # self.userRecords_db.get_chat_history()
         chat_records = st.session_state.get('chat_history', [])
-
         if chat_records:
             # 迭代顯示每一條聊天記錄
             for result in chat_records:
@@ -64,8 +71,3 @@ class MainContent:
                 with st.chat_message("ai"):
                     st.markdown(result['ai_response'])
 
-    def display_active_messages(self):
-        """顯示用戶與AI之間的消息"""
-        for message in st.session_state.get('messages', []):
-            st.chat_message('user').write(message[0])
-            st.chat_message('ai').write(message[1])

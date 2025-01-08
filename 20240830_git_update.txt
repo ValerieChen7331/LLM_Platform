@@ -1,0 +1,13 @@
+更新 DB 結構、增加 memory 功能、修正 windows 切換錯誤
+
+1. DB:
+更新 DB 結構
+修正 tmp 和 vectordb 的存檔路徑
+
+2. LLM:
+更正LLM名稱
+embedding model 將從 UserDB 回傳
+
+3. Web:
+修正重複的 (新對話), "empty_window_exists"
+增加在 "新對話 "或 "視窗切換" 時，重設所有 session 

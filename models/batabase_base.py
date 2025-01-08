@@ -1,5 +1,8 @@
 from pathlib import Path
 import sqlite3
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 class BaseDB:
     def __init__(self, db_path: Path):
@@ -27,7 +30,7 @@ class BaseDB:
                 conn.execute(query, params)
                 conn.commit()
         except sqlite3.OperationalError as e:
-            print(f"execute_query 資料庫操作錯誤: {e}")
+            logging.error(f"execute_query 資料庫操作錯誤: {e}")
             raise
 
     def fetch_query(self, query: str, params=()):
@@ -37,5 +40,5 @@ class BaseDB:
                 cursor = conn.execute(query, params)
                 return cursor.fetchall()
         except sqlite3.OperationalError as e:
-            print(f"fetch_query 資料庫操作錯誤: {e}")
+            logging.error(f"fetch_query 資料庫操作錯誤: {e}")
             raise

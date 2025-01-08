@@ -16,10 +16,10 @@ class LLMService:
         self.userRecords_db = UserRecordsDB()
         self.devOps_db = DevOpsDB()
 
+
     def query(self, query):
         """根據查詢和選擇的助理類型執行適當的 LLM 查詢"""
         # 從 session_state 取得相關設定
-        retriever = st.session_state.get('retriever')
         selected_agent = st.session_state.get('agent')
         db_name = st.session_state.get('db_name')
         db_source = st.session_state.get('db_source')
@@ -40,7 +40,7 @@ class LLMService:
 
         elif selected_agent == '個人KM':
             # 使用檢索增強生成模式進行查詢
-            response, retrieved_data = self.llm_model.query_llm_rag(retriever, query)
+            response, retrieved_data = self.llm_model.query_llm_rag(query)
 
         else:
             # 直接使用 LLM 進行查詢
@@ -48,6 +48,7 @@ class LLMService:
 
         # 更新 session_state 中的聊天記錄
         st.session_state['chat_history'].append({"user_query": query, "ai_response": response})
+        st.session_state['empty_window_exists'] = False
 
         # 將查詢和回應結果保存到資料庫
         self.userRecords_db.save_to_database(query, response)

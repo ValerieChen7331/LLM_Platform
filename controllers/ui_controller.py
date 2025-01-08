@@ -3,8 +3,7 @@ from services.document_services import DocumentService
 from models.batabase_userRecords import UserRecordsDB
 import streamlit as st
 import uuid
-import pandas as pd
-import sqlite3
+
 
 class UIController:
     def __init__(self):
@@ -15,49 +14,55 @@ class UIController:
 
     def initialize_session_state(self):
         # 從 userRecords_db 載入資料
-        database = self.userRecords_db.load_database()
+        database = self.userRecords_db.load_database('chat_history')
 
         # 設置聊天窗口的數量及活躍窗口索引
         if not database.empty:
             count_chat_windows = len(set(database['active_window_index']))
-            active_window_index = count_chat_windows
-            count_chat_windows += 1
+            active_window_index = count_chat_windows    # 開機預設: 新的 window
+            count_chat_windows += 1                     # 總共 n+1 個 windows
         else:
-            count_chat_windows = 1
-            active_window_index = 0
+            count_chat_windows = 1      # 總共 1 個 window
+            active_window_index = 0     # 開機預設: 1 個新的 window
 
-        st.session_state.setdefault('num_chat_windows', count_chat_windows)
-        st.session_state.setdefault('active_window_index', active_window_index)
-        print('----------------')
-        print('num_chat_windows')
-        print(st.session_state['num_chat_windows'])
-        print('active_window_index')
-        print( st.session_state['active_window_index'])
-        print('----------------')
-
-        # 初始化其他 session 狀態參數
+        # 初始化 session 狀態參數
         default_session_params = {
+            'conversation_id': str(uuid.uuid4()),
+            'num_chat_windows': count_chat_windows,
+            'active_window_index': active_window_index,
+
+            'agent': '一般助理',
             'mode': '內部LLM',
-            'model': None,
-            'option': None,
-            'messages': [],
-            'retriever': None,
+            'llm_option': 'Qwen2-Alibaba',
+            'model': '',
             'api_base': None,
             'api_key': None,
-            'conversation_id': str(uuid.uuid4()),
-            'chat_history': [],
-            'title': '',
-            'agent': '一般助理',
+
+            'embedding': None,
+            'doc_names': '',
             'db_name': None,
             'db_source': None,
+
+            #'messages': [],
+            'chat_history': [],
+            'title': '',
+
+            'empty_window_exists': True
         }
 
         for key, value in default_session_params.items():
             st.session_state.setdefault(key, value)
 
+        print('----------------')
+        print('num_chat_windows')
+        print(st.session_state['num_chat_windows'])
+        print('active_window_index')
+        print(st.session_state['active_window_index'])
+        print('----------------')
+
     def get_title(self, index):
         # 從資料庫加載數據
-        df_database = self.userRecords_db.load_database()  # 使用 userRecords_db 而非 database_model
+        df_database = self.userRecords_db.load_database('chat_history')
 
         # 過濾出匹配 active_window_index 的行
         df_window = df_database[df_database['active_window_index'] == index]
@@ -72,13 +77,17 @@ class UIController:
 
     def new_chat(self):
         # 創建新聊天窗口，更新 session 狀態
-        if st.session_state.get('chat_history'):
-            st.session_state['conversation_id'] = str(uuid.uuid4())
-            st.session_state['chat_history'] = []
+        print(st.session_state.get('chat_history'))
+        if st.session_state.get('empty_window_exists'):
+            st.session_state['active_window_index'] = st.session_state.get('num_chat_windows') - 1
+        else:
+            st.session_state['active_window_index'] = st.session_state.get('num_chat_windows')
             st.session_state['num_chat_windows'] += 1
-            st.session_state['active_window_index'] = st.session_state['num_chat_windows']
-            st.session_state['retriever'] = None
-            st.rerun()  # 刷新頁面
+
+        st.session_state['conversation_id'] = str(uuid.uuid4())
+        self.userRecords_db.reset_session_state_to_defaults()
+        st.session_state['empty_window_exists'] = True
+        st.rerun()  # 刷新頁面
 
     def delete_chat_history_and_update_indexes(self, delete_index):
         # 刪除指定聊天窗口索引的聊天歷史記錄
@@ -107,3 +116,4 @@ class UIController:
     def process_uploaded_documents(self):
         # 處理上傳的文件
         self.doc_service.process_uploaded_documents()
+

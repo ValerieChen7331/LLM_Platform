@@ -5,12 +5,14 @@ import streamlit as st
 from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
+# from langchain_chroma import Chroma
 from langchain.schema.document import Document
 from apis.file_paths import FilePaths
 from apis.embedding_api import EmbeddingAPI
 
 # 設定日誌記錄的級別為 INFO
 logging.basicConfig(level=logging.INFO)
+
 
 class DocumentModel:
     def __init__(self):
@@ -53,51 +55,22 @@ class DocumentModel:
     def split_documents_into_chunks(self, documents):
         # 將文件拆分成塊
         text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=200,
-            chunk_overlap=100,
+            chunk_size=500,
+            chunk_overlap=200,
             length_function=len
         )
         document_chunks = text_splitter.split_documents(documents)
         logging.info(f"Split documents into {len(document_chunks)} chunks")
         return document_chunks
 
-
     def embeddings_on_local_vectordb(self, document_chunks):
         # 將文檔塊嵌入本地向量數據庫，並返回檢索器設定
         if not document_chunks:
             raise ValueError("No document chunks to embed. Please check the text splitting process.")
-        vector_db = Chroma.from_documents(
+
+        Chroma.from_documents(
             document_chunks,
             embedding=self.embedding_function,
             persist_directory=self.vector_store_dir.as_posix()
         )
         logging.info(f"Persisted vector DB at {self.vector_store_dir}")
-        retriever = vector_db.as_retriever(search_kwargs={'k': 3})
-        test = retriever.to_json()
-        print("hehehehehhehehe")
-        print(test    def embeddings_on_local_vectordb(self, document_chunks):
-        # 將文檔塊嵌入本地向量數據庫，並返回檢索器設定
-        if not document_chunks:
-            raise ValueError("No document chunks to embed. Please check the text splitting process.")
-        vector_db = Chroma.from_documents(
-            document_chunks,
-            embedding=self.embedding_function,
-            persist_directory=self.vector_store_dir.as_posix()
-        )
-        logging.info(f"Persisted vector DB at {self.vector_store_dir}")
-        retriever = vector_db.as_retriever(search_kwargs={'k': 3})
-
-        retriever_json = retriever.to_json()
-        save retriever_json
-        print(retriever_json)
-
-        return retriever)
-        print('------retriever---')
-        print(retriever)
-        print(type(retriever))
-        print('------vector_db---')
-        import inspect
-        members = inspect.getmembers()
-        for name, value in members:
-            print(f"{name}: {value}")
-        return retriever

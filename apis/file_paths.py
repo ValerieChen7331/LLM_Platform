@@ -12,10 +12,10 @@ class FilePaths:
         username = st.session_state.get('username')
         conversation_id = st.session_state.get('conversation_id')
 
-        self.TMP_DIR = base_dir.joinpath(f"user/{username}/tmp")
-        self.LOCAL_VECTOR_STORE_DIR = base_dir.joinpath(f"user/{username}/vector_store/{conversation_id}")
+        self.TMP_DIR = base_dir.joinpath(f"user/{username}/{conversation_id}/tmp")
+        self.LOCAL_VECTOR_STORE_DIR = base_dir.joinpath(f"user/{username}/{conversation_id}/vector_store")
         self.OUTPUT_DIR = base_dir.joinpath('output')
-        self.User_Records_DIR = base_dir.joinpath('user')
+        self.User_Records_DIR = base_dir.joinpath(f'user/{username}')
         self.DevOps_DIR = base_dir.joinpath('developer')
 
     def get_tmp_dir(self):

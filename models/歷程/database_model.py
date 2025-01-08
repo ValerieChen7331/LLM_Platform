@@ -4,7 +4,7 @@ from models.dev_ops_db import DevOpsDB
 def main():
     # 使用 UserRecordsDB
     user_db = UserRecordsDB()
-    user_db.load_database()
+    user_db.load_database('chat_history')
 
     # 使用 DevOpsDB
     dev_ops_db = DevOpsDB()
