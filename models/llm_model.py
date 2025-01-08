@@ -27,7 +27,6 @@ class LLMModel:
 
             title = llm.invoke(formatted_prompt)
             st.session_state['title'] = title
-
             return title
 
         except Exception as e:

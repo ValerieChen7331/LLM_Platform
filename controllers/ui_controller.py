@@ -39,6 +39,9 @@ class UIController:
         st.session_state.setdefault('conversation_id', str(uuid.uuid4()))
         st.session_state.setdefault('chat_history', [])
         st.session_state.setdefault('title', '')
+        st.session_state.setdefault('agent', '一般助理')
+        st.session_state.setdefault('db_name', None)
+        st.session_state.setdefault('db_source', None)
 
     def get_title(self, current_chat_window_index):
         # 從資料庫加載數據
@@ -61,6 +64,7 @@ class UIController:
         st.session_state['chat_history'] = []
         st.session_state['chat_window_index'] += 1
         st.session_state['current_chat_window_index'] = st.session_state['chat_window_index']
+        st.rerun()  # 刷新頁面
 
     def delete_chat_history_and_update_indexes(self, delete_index):
         # 刪除指定聊天窗口索引的聊天歷史記錄

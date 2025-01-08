@@ -1,2 +1,6 @@
 yaml==6.0.1
 streamlit_authenticator==0.3.2
+langgraph
+-U langchain-community
+pymssql
+cx_Oracle
