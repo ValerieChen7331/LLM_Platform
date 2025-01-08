@@ -77,6 +77,7 @@ class UIController:
             st.session_state['chat_history'] = []
             st.session_state['num_chat_windows'] += 1
             st.session_state['active_window_index'] = st.session_state['num_chat_windows']
+            st.session_state['retriever'] = None
             st.rerun()  # 刷新頁面
 
     def delete_chat_history_and_update_indexes(self, delete_index):

@@ -18,7 +18,7 @@ class DocumentService:
             document_chunks = self.doc_model.split_documents_into_chunks(documents)
             # 在本地向量數據庫中嵌入文檔塊
             st.session_state['retriever'] = self.doc_model.embeddings_on_local_vectordb(document_chunks)
-
+            print('process_uploaded_documents...')
         except Exception as e:
             # 處理文檔時發生錯誤，顯示錯誤訊息
             st.error(f"處理文檔時發生錯誤：{e}")

@@ -9,13 +9,11 @@ class FilePaths:
         else:
             base_dir = Path(base_dir)  # 確保 base_dir 是 Path 對象
 
-        #username = st.session_state.get('username')
-        #conversation_id = st.session_state.get('conversation_id')
-        #self.TMP_DIR = base_dir.joinpath(f"user/{username}/tmp")
-        #self.LOCAL_VECTOR_STORE_DIR = base_dir.joinpath(f"user/{username}/vector_store/{conversation_id}")
+        username = st.session_state.get('username')
+        conversation_id = st.session_state.get('conversation_id')
 
-        self.TMP_DIR = base_dir.joinpath('tmp')
-        self.LOCAL_VECTOR_STORE_DIR = base_dir.joinpath('vector_store')
+        self.TMP_DIR = base_dir.joinpath(f"user/{username}/tmp")
+        self.LOCAL_VECTOR_STORE_DIR = base_dir.joinpath(f"user/{username}/vector_store/{conversation_id}")
         self.OUTPUT_DIR = base_dir.joinpath('output')
         self.User_Records_DIR = base_dir.joinpath('user')
         self.DevOps_DIR = base_dir.joinpath('developer')

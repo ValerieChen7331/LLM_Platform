@@ -73,5 +73,31 @@ class DocumentModel:
         )
         logging.info(f"Persisted vector DB at {self.vector_store_dir}")
         retriever = vector_db.as_retriever(search_kwargs={'k': 3})
+        test = retriever.to_json()
+        print("hehehehehhehehe")
+        print(test    def embeddings_on_local_vectordb(self, document_chunks):
+        # 將文檔塊嵌入本地向量數據庫，並返回檢索器設定
+        if not document_chunks:
+            raise ValueError("No document chunks to embed. Please check the text splitting process.")
+        vector_db = Chroma.from_documents(
+            document_chunks,
+            embedding=self.embedding_function,
+            persist_directory=self.vector_store_dir.as_posix()
+        )
+        logging.info(f"Persisted vector DB at {self.vector_store_dir}")
+        retriever = vector_db.as_retriever(search_kwargs={'k': 3})
 
+        retriever_json = retriever.to_json()
+        save retriever_json
+        print(retriever_json)
+
+        return retriever)
+        print('------retriever---')
+        print(retriever)
+        print(type(retriever))
+        print('------vector_db---')
+        import inspect
+        members = inspect.getmembers()
+        for name, value in members:
+            print(f"{name}: {value}")
         return retriever
