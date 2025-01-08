@@ -3,8 +3,13 @@ from services.document_services import DocumentService
 from models.batabase_userRecords import UserRecordsDB
 import streamlit as st
 import uuid
-
-
+import pandas as pd
+import sqlite3
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase import pdfmetrics
+import os
 class UIController:
     def __init__(self):
         # 初始化 LLMService 和 DocumentService
@@ -107,11 +112,59 @@ class UIController:
         # 更新 session state 中的聊天窗口索引
         st.session_state['num_chat_windows'] -= 1
 
+    def save_response_to_pdf_with_chinese(self, response_content, file_name):
+        # 初始化 Canvas 來創建 PDF
+        c = canvas.Canvas(file_name, pagesize=letter)
+        width, height = letter
+
+        # 設置中文字體，這裡使用 .ttf 格式的 NotoSansCJK 字體
+        font_path = "NotoSansCJKsc-Regular.ttf"  # 確保這個路徑指向你的 .ttf 文件
+        if not os.path.exists(font_path):
+            st.error("找不到 NotoSansCJK 字體文件，請確保該字體已安裝")
+            return
+
+        pdfmetrics.registerFont(TTFont('NotoSansCJK', font_path))
+        c.setFont("NotoSansCJK", 12)
+
+        # 將回應內容寫入 PDF，每行 80 個字符
+        lines = response_content.split('\n')
+        y_position = height - 40  # 初始行的位置
+
+        for line in lines:
+            wrapped_lines = self.wrap_text(line, 80)  # 將文本分行處理
+            for wrapped_line in wrapped_lines:
+                c.drawString(40, y_position, wrapped_line)
+                y_position -= 14  # 每行往下移動
+                if y_position < 40:  # 防止超出頁面範圍
+                    c.showPage()
+                    y_position = height - 40
+
+        # 保存 PDF
+        c.save()
+
+        return file_name
+
+    def wrap_text(self, text, max_length):
+        """將長文本分行"""
+        return [text[i:i + max_length] for i in range(0, len(text), max_length)]
+
     def handle_query(self, query):
         # 處理使用者查詢，發送給 LLM 並顯示回應
         st.chat_message("human").write(query)
         response = self.llm_service.query(query)
         st.chat_message("ai").write(response)
+
+        # 使用 reportlab 生成包含中文的 PDF 並提供下載
+        file_name = f"response_{str(uuid.uuid4())}.pdf"
+        file_path = self.save_response_to_pdf_with_chinese(response, file_name)
+
+        with open(file_path, "rb") as f:
+            st.download_button(
+                label="下載回應內容為 PDF",
+                data=f,
+                file_name=file_name,
+                mime="application/pdf"
+            )
 
     def process_uploaded_documents(self):
         # 處理上傳的文件

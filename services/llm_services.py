@@ -1,6 +1,7 @@
 import streamlit as st
 
 from models.llm_model import LLMModel
+from models.llm_rag import RAGModel
 from models.batabase_userRecords import UserRecordsDB
 from models.batabase_devOps import DevOpsDB
 
@@ -13,6 +14,7 @@ class LLMService:
     def __init__(self):
         """初始化 LLMModel 和 DatabaseModel"""
         self.llm_model = LLMModel()
+        self.llm_rag = RAGModel()
         self.userRecords_db = UserRecordsDB()
         self.devOps_db = DevOpsDB()
 
@@ -40,7 +42,7 @@ class LLMService:
 
         elif selected_agent == '個人KM':
             # 使用檢索增強生成模式進行查詢
-            response, retrieved_data = self.llm_model.query_llm_rag(query)
+            response, retrieved_data = self.llm_rag.query_llm_rag(query)
 
         else:
             # 直接使用 LLM 進行查詢

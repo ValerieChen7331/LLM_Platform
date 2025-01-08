@@ -1,18 +1,20 @@
 import streamlit as st
 import pandas as pd
-from langchain.chains import ConversationalRetrievalChain
-from langchain_community.vectorstores import Chroma
-from langchain.chains import ConversationChain
-from langchain.prompts import ChatPromptTemplate
-from langchain.memory import ConversationBufferMemory
-# from langchain_chroma import Chroma
-from langchain.prompts import PromptTemplate
 import logging
 
 from apis.llm_api import LLMAPI
-from apis.file_paths import FilePaths
 from apis.embedding_api import EmbeddingAPI
+from apis.file_paths import FilePaths
 
+from langchain.prompts import PromptTemplate
+from langchain.prompts import ChatPromptTemplate
+
+from langchain.chains import ConversationChain
+from langchain.memory import ConversationBufferMemory
+from langchain.memory import ChatMessageHistory
+
+from langchain_core.prompts import ChatPromptTemplate
+from langchain.prompts import PromptTemplate
 
 class LLMModel:
     def __init__(self):
@@ -41,87 +43,57 @@ class LLMModel:
         except Exception as e:
             return self._handle_error(f"查詢 set_window_title 時發生錯誤: {e}")
 
-    def query_llm_direct_1(self, query):
-        """直接查詢 LLM 並返回結果。"""
-        try:
-            llm = LLMAPI.get_llm()  # 獲取 LLM API 物件
-            prompt_template = self._llm_direct_prompt()   # 獲取prompt模板
-
-            # !!修改 chat_history!
-            chat_history = []
-            # 格式化prompt模板，插入query, chat_history
-            formatted_prompt = prompt_template.format(query=query, chat_history=chat_history)
-
-            response = llm.invoke(formatted_prompt)     # 調用 LLM API，生成回應
-            return response
-
-        except Exception as e:
-            return self._handle_error(f"查詢 query_llm_direct 時發生錯誤: {e}")
-
     def query_llm_direct(self, query):
-        """直接查詢 LLM 並返回結果。"""
-        st.session_state['message'] = st.session_state['chat_history']
+        # 獲取 active_window_index
+        active_window_index = st.session_state.get('active_window_index', 0)
 
-        if 'conversation_memory' not in st.session_state:
-            st.session_state['conversation_memory'] = ConversationBufferMemory()
-        print(st.session_state['conversation_memory'].to_json)
+        # 確保 session_state 中有針對 active_window_index 的 'conversation_memory'
+        memory_key = f'conversation_memory_{active_window_index}'
+        if memory_key not in st.session_state:
+            st.session_state[memory_key] = ConversationBufferMemory(memory_key="history", input_key="input")
 
-        try:
-            llm = LLMAPI.get_llm()  # 獲取 LLM API 物件
-            prompt_template = self._llm_direct_prompt()  # 獲取 prompt 模板
+        # 使用 ChatMessageHistory 添加對話歷史到 ConversationBufferMemory
+        chat_history_data = st.session_state.get('chat_history', [])
+        if chat_history_data:
+            chat_history = ChatMessageHistory()
+            for record in chat_history_data:
+                user_query, ai_response = record['user_query'], record['ai_response']
+                chat_history.add_user_message(user_query)
+                chat_history.add_ai_message(ai_response)
 
-            # Create the conversation chain with memory
-            conversation_chain = ConversationChain(
-                llm=llm,
-                memory=st.session_state['conversation_memory'],
-                prompt=ChatPromptTemplate.from_template(prompt_template.template)
-            )
+            # 將 ChatMessageHistory 設置為 ConversationBufferMemory 的歷史記錄
+            st.session_state[memory_key].chat_memory = chat_history
 
-            response = conversation_chain.predict(input=query)
-            #st.session_state.messages.append((query, response))
-            return response
+        # 定義 LLM
+        llm = LLMAPI.get_llm()
 
-        except Exception as e:
-            return self._handle_error(f"查詢 query_llm_direct 時發生錯誤: {e}")
+        # 自訂提示模板，包含上下文和指令
+        init_prompt = f"""
+        You are a helpful and knowledgeable assistant. You will provide responses in Traditional Chinese (台灣中文).
+        Here is the conversation history:
+        {{history}}
 
-    def query_llm_rag(self, query):
-        """使用 RAG 查詢 LLM，根據給定的問題和檢索的文件內容返回答案。"""
-        try:
-            # 建立向量資料庫和檢索器
-            vector_db = Chroma(
-                embedding_function=self.embedding_function,
-                persist_directory=self.vector_store_dir.as_posix()
-            )
-            retriever = vector_db.as_retriever(search_kwargs={'k': 3})
-            qa_chain = ConversationalRetrievalChain.from_llm(
-                llm=LLMAPI.get_llm(),        # 獲取 LLM API 物件
-                retriever=retriever,         # 設置檢索器
-                return_source_documents=True,   # 返回檢索到的文件
-                combine_docs_chain_kwargs={"prompt": self._rag_prompt()}   # prompt 模板
-            )
+        Now, please provide a concise and relevant response to the following query:
+        {{input}}
+        """
 
-            # !!修改 chat_history!
-            chat_history = []
-            # 使用 RAG 查詢 LLM，生成答案
-            result_rag = qa_chain.invoke({'question': query, 'chat_history': chat_history})
-
-            response = result_rag.get('answer', '') # 取得回答
-            retrieved_documents = result_rag.get('source_documents', [])    # 取得檢索到的文件
-
-            # 保存檢索到的數據到 CSV 文件
-            self._save_retrieved_data_to_csv(query, retrieved_documents, response)
-            return response, retrieved_documents
-
-        except Exception as e:
-            return self._handle_error(f"查詢 query_llm_rag 時發生錯誤: {e}"), []
+        # 使用 RunnableWithMessageHistory 並確保 memory_key 和 prompt 中的變數一致
+        conversation_chain = ConversationChain(
+            llm=llm,
+            memory=st.session_state[memory_key],
+            prompt=ChatPromptTemplate.from_template(init_prompt)
+        )
+        # 查詢 LLM 並返回結果
+        result = conversation_chain.invoke(input=query)
+        response = result.get('response', '')
+        return response
 
     def _title_prompt(self):
         """生成設置窗口標題所需的提示模板。"""
         template = """
-        根據以下提問(Q:)，列出1個關鍵字(A:)。請務必遵守以下規則：
+        根據以下提問(Q:)，列出1個關鍵字。請務必遵守以下規則：
         1.只能輸出關鍵字，不要有其他說明。
-        2.若使用者的提問字數少於5，直接輸出提問。
-        3.輸出字數12字以內。
+        2.輸出字數12字以內。
         ---
         範例: 
         Q:如果有超過一個月的出勤獎勵，該如何計算？
@@ -135,24 +107,24 @@ class LLMModel:
         """生成直接查詢 LLM 所需的提示模板。"""
         template = """
         若無特別說明，請使用繁體中文來回答。
-        若需參考歷史紀錄，請以較新的問答為優先。
-        問答歷史紀錄: {history}
-        問題: {input}
+        歷史紀錄越下面是越新的，若需參考歷史紀錄，請以較新的問答為優先。
+        問答歷史紀錄: {chat_history}
+        問題: {query}
         """
-        return PromptTemplate(input_variables=["input", "history"], template=template)
+        return PromptTemplate(input_variables=["query", "chat_history"], template=template)
 
     def _rag_prompt(self):
         """生成 RAG 查詢 LLM 所需的提示模板。"""
         template = """
         請根據「文件內容」回答問題。如果以下資訊不足，請如實告知，勿自行編造!
         歷史紀錄越下面是越新的，若需參考歷史紀錄，請以較新的問答為優先。
-        若無特別說明，請使用繁體中文來回答問題：
-        問答歷史紀錄: {chat_history}
+        若無特別說明，請使用繁體中文來回答問題：        
         文件內容: {context}
         問題: {question}
         答案:
         """
-        return PromptTemplate(input_variables=["chat_history", "context", "question"], template=template)
+        # 問答歷史紀錄: {chat_history}
+        return PromptTemplate(input_variables=["context", "question"], template=template)
 
 
     def _save_retrieved_data_to_csv(self, query, retrieved_data, response):

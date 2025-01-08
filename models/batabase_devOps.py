@@ -90,8 +90,8 @@ class DevOpsDB(BaseDB):
 
         # 根據 agent 設置對應的 mode 和 model
         agent_settings = {
-            '資料庫查找助理': ('內部LLM', 'duckdb-nsql'),
-            '資料庫查找助理2.0': ('內部LLM', 'duckdb-nsql'),
+            '資料庫查找助理': ('內部LLM', 'codeqwen, wangshenzhi/llama3.1_8b_chinese_chat'),
+            '資料庫查找助理2.0': ('內部LLM', 'duckdb-nsql, wangshenzhi/llama3.1_8b_chinese_chat'),
             'SQL生成助理': ('內部LLM', 'duckdb-nsql')
         }
 

@@ -55,6 +55,8 @@ class MainContent:
         # 從user資料庫中取得聊天記錄
         # self.userRecords_db.get_chat_history()
         chat_records = st.session_state.get('chat_history', [])
+        print('chat_records')
+        print(chat_records)
         if chat_records:
             # 迭代顯示每一條聊天記錄
             for result in chat_records:
