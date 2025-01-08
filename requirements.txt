@@ -4,3 +4,10 @@ langgraph
 -U langchain-community
 pymssql
 cx_Oracle
+
+pip install -qU "langchain-chroma>=0.1.2"
+
+# ----
+# charlie:
+# langgraph==0.1.17
+# streamlit-authenticator==0.3.3

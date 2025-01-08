@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  ollama:
+    image: gai_web-ollama:latest
+    container_name: GAI_web
+    restart: always
+    ports:
+      - '8501:8501'
+    tty: true
+    stdin_open: true
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - capabilities: [gpu]
+            driver: nvidia
+            count: all
+    volumes:
+      - type: bind
+        source: /home/ubuntu/N000175896/GAI_web/app/main
+        target: /GAI_web

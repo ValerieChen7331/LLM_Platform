@@ -9,6 +9,7 @@ from langchain_community.vectorstores import Chroma
 from langchain.schema.document import Document
 from apis.file_paths import FilePaths
 from apis.embedding_api import EmbeddingAPI
+from pathlib import Path
 
 # 設定日誌記錄的級別為 INFO
 logging.basicConfig(level=logging.INFO)
@@ -23,16 +24,38 @@ class DocumentModel:
         self.embedding_function = EmbeddingAPI.get_embedding_function()
 
     def create_temporary_files(self):
-        # 建立臨時文件
+        """建立臨時文件"""
+        # 確保臨時目錄已存在，如果不存在則創建該目錄
         self.tmp_dir.mkdir(parents=True, exist_ok=True)
-        temporary_files = []
+        temporary_files = []        # 用來儲存臨時文件的文件清單
+        doc_names = {}              # 用來儲存原始文件名與臨時文件名的對應關係
+
+        # 從 Streamlit 的 session state 中獲取 'source_docs' 列表，如果沒有就使用空列表
         for source_docs in st.session_state.get('source_docs', []):
+            # 指定臨時文件的目錄為 self.tmp_dir，文件後綴為 '.pdf'。設定 delete=False 以確保文件不會在關閉時被自動刪除
             with tempfile.NamedTemporaryFile(delete=False, dir=self.tmp_dir.as_posix(), suffix='.pdf') as tmp_file:
+                # 將 source_docs 的內容寫入臨時文件中
                 tmp_file.write(source_docs.read())
-                temporary_files.append(tmp_file.name)
-                logging.info(f"Created temporary file: {tmp_file.name}")
+
+                # 取得臨時文件的完整路徑
+                full_path = tmp_file.name
+                # 使用 Path 對象取得檔案名稱（不包括路徑）
+                file_name = Path(full_path).name
+                # 將原始文件名和臨時文件名加入字典
+                doc_names[file_name] = source_docs.name
+
+                # 將創建的臨時文件名添加到 temporary_files 列表中
+                #temporary_files.append(tmp_file.name)
+
+                # 記錄一條信息日誌，顯示創建的臨時文件的路徑
+                logging.info(f"Created temporary file: {file_name}")
+
+            # 關閉臨時文件（這行其實可以省略，因為 with 語句會自動關閉文件）
             tmp_file.close()
-        return temporary_files
+
+        # 將檔案名稱對應關係儲存到 session state 中
+        st.session_state['doc_names'] = doc_names
+        print(doc_names)
 
     def load_documents(self):
         # 加載 PDF 文件

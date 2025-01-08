@@ -41,11 +41,20 @@ class UserRecordsDB(BaseDB):
                 id INTEGER PRIMARY KEY,
                 conversation_id TEXT,
                 agent TEXT,             
-                embedding TEXT,
-                doc_names TEXT
+                embedding TEXT
             )
         '''
         self.execute_query(pdf_uploads_query)
+
+        file_names_query = '''
+                    CREATE TABLE IF NOT EXISTS file_names (
+                        id INTEGER PRIMARY KEY,
+                        conversation_id TEXT,
+                        tmp_name TEXT,             
+                        org_name TEXT
+                    )
+                '''
+        self.execute_query(file_names_query)
         logging.info("UserRecordsDB 資料庫初始化成功。")
 
     def load_database(self, database) -> pd.DataFrame:
@@ -142,7 +151,7 @@ class UserRecordsDB(BaseDB):
             'num_chat_windows': 0,
             'title': '',
             'user_query': query,
-            'ai_response': response,
+            'ai_response': response
         }.items()}
 
         # 根據 agent 設置對應的 mode 和 model
@@ -170,7 +179,7 @@ class UserRecordsDB(BaseDB):
             logging.info("查詢結果已成功保存到資料庫 UserDB (chat_history)")
 
         except Exception as e:
-            logging.error(f"保存到 UserDB (chat_history) 資料庫時發生錯誤: {e}")
+            logging.error(f"保存到 UserDB (chat_history) 資料庫時發生錯誤: {e}. Data: {data}")
 
     def save_to_pdf_uploads(self):
         """將查詢結果保存到資料庫中。"""
@@ -179,8 +188,7 @@ class UserRecordsDB(BaseDB):
         data = {key: st.session_state.get(key, default) for key, default in {
             'conversation_id': '',
             'agent': '',
-            'embedding': '',
-            'doc_names': ''
+            'embedding': ''
         }.items()}
 
         try:
@@ -188,8 +196,8 @@ class UserRecordsDB(BaseDB):
             self.execute_query(
                 """
                 INSERT INTO pdf_uploads 
-                (conversation_id, agent, embedding, doc_names ) 
-                VALUES (?, ?, ?, ?)
+                (conversation_id, agent, embedding) 
+                VALUES (?, ?, ?)
                 """,
                 tuple(data.values())
             )
@@ -208,41 +216,35 @@ class UserRecordsDB(BaseDB):
         except Exception as e:
             logging.error(f"Error deleting vector db {directory_path}: {e}")
 
-    def get_conversation_id(self, index):
-        """從資料庫中獲取指定 active_window_index 的 conversation_id。"""
+    def save_to_file_names(self):
+        """將查詢結果保存到資料庫中。"""
+        conversation_id = st.session_state.get('conversation_id', '')
+        doc_names = st.session_state.get('doc_names', {})
+
+        for tmp_name, org_name in doc_names.items():  # 修正此處，正確解開 doc_names 字典
+            try:
+                # 插入資料
+                self.execute_query(
+                    """
+                    INSERT INTO file_names 
+                    (conversation_id, tmp_name, org_name) 
+                    VALUES (?, ?, ?)
+                    """,
+                    (conversation_id, tmp_name, org_name)  # 修正此處，將三個參數放入 tuple 中
+                )
+                logging.info(f"file_names 已成功保存到 UserDB: tmp_name={tmp_name}, org_names={org_name}")
+            except Exception as e:
+                # 記錄錯誤訊息
+                logging.error(f"file_names 保存到 UserDB 時發生錯誤: {e}")
+
+    def delete_vector_db(self, index, conversation_id):
+        # 刪除資料夾
+        st.session_state['conversation_id'] = conversation_id
+        directory_path = self.file_paths.get_local_vector_store_dir()
         try:
-            query = """
-                SELECT conversation_id FROM chat_history 
-                WHERE active_window_index = ? 
-            """
-            # 假設 fetch_query 返回的是一個 list of tuples，例如：[(1,), (2,)]
-            result = self.fetch_query(query, (index,))
-
-            if result:
-                # 直接提取最後一個 conversation_id
-                return result[-1][0]
-            else:
-                return None  # 如果沒有找到資料，則設為 None
-
+            logging.info(f"Deleting vector db: {directory_path}")
+            shutil.rmtree(directory_path)
         except Exception as e:
-            st.error(f"get_conversation_id 發生錯誤: {e}")
+            logging.error(f"Error deleting vector db {directory_path}: {e}")
 
 
-    def get_agent(self, index):
-        """從資料庫中獲取指定 active_window_index 的 agent"""
-        try:
-            query = """
-                SELECT agent FROM chat_history 
-                WHERE active_window_index = ? 
-            """
-            #
-            result = self.fetch_query(query, (index,))
-
-            if result:
-                # 直接提取最後一個 conversation_id
-                return result[-1][0]
-            else:
-                return '一般助理'
-
-        except Exception as e:
-            st.error(f"get_agent 發生錯誤: {e}")

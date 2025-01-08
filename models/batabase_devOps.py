@@ -45,11 +45,23 @@ class DevOpsDB(BaseDB):
                 username TEXT,                                        -- UserRecordsDB 沒有
                 conversation_id TEXT,
                 agent TEXT,
-                embedding TEXT,
-                doc_names TEXT
+                embedding TEXT
             )
         '''
         self.execute_query(pdf_uploads_query)
+
+        file_names_query = '''
+                            CREATE TABLE IF NOT EXISTS file_names (
+                                id INTEGER PRIMARY KEY,
+                                upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- UserRecordsDB 沒有
+                                username TEXT,                                    -- UserRecordsDB 沒有
+                                conversation_id TEXT,
+                                tmp_name TEXT,             
+                                org_name TEXT
+                            )
+                        '''
+        self.execute_query(file_names_query)
+
         logging.info("DevOpsDB 資料庫初始化成功。")
 
     def save_to_database(self, query: str, response: str):
@@ -73,8 +85,18 @@ class DevOpsDB(BaseDB):
             'num_chat_windows': 0,
             'title': '',
             'user_query': query,
-            'ai_response': response,
+            'ai_response': response
         }.items()}
+
+        # 根據 agent 設置對應的 mode 和 model
+        agent_settings = {
+            '資料庫查找助理': ('內部LLM', 'duckdb-nsql'),
+            '資料庫查找助理2.0': ('內部LLM', 'duckdb-nsql'),
+            'SQL生成助理': ('內部LLM', 'duckdb-nsql')
+        }
+
+        if data['agent'] in agent_settings:
+            data['mode'], data['model'] = agent_settings[data['agent']]
 
         try:
             self.execute_query(
@@ -101,8 +123,7 @@ class DevOpsDB(BaseDB):
             'username': '',
             'conversation_id': '',
             'agent': '',
-            'embedding': '',
-            'doc_names': ''
+            'embedding': ''
         }.items()}
 
         try:
@@ -110,8 +131,8 @@ class DevOpsDB(BaseDB):
             self.execute_query(
                 """
                 INSERT INTO pdf_uploads 
-                (upload_time, username, conversation_id, agent, embedding, doc_names ) 
-                VALUES (?, ?, ?, ?, ?, ?)
+                (upload_time, username, conversation_id, agent, embedding) 
+                VALUES (?, ?, ?, ?, ?)
                 """,
                 tuple(data.values())
             )
@@ -119,3 +140,27 @@ class DevOpsDB(BaseDB):
         except Exception as e:
             # 記錄錯誤訊息
             logging.error(f"保存到 DevOpsDB (pdf_uploads) 資料庫時發生錯誤: {e}")
+
+
+    def save_to_file_names(self):
+        """將查詢結果保存到資料庫中。"""
+        upload_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        username = st.session_state.get('username', '')
+        conversation_id = st.session_state.get('conversation_id', '')
+        doc_names = st.session_state.get('doc_names', {})
+
+        for tmp_name, org_name in doc_names.items():
+            try:
+                # 插入資料
+                self.execute_query(
+                    """
+                    INSERT INTO file_names 
+                    (upload_time, username, conversation_id, tmp_name, org_name) 
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (upload_time, username, conversation_id, tmp_name, org_name)
+                )
+                logging.info(f"file_names 已成功保存到 DevOpsDB: tmp_name={tmp_name}, org_names={org_name}")
+            except Exception as e:
+                # 記錄錯誤訊息
+                logging.error(f"file_names 保存到 DevOpsDB 時發生錯誤: {e}")

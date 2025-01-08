@@ -6,8 +6,16 @@ credentials:
   usernames:
     charlie:
       email: ka175896@npc.com.tw
+      failed_login_attempts: 0
       logged_in: false
       name: charlie
       password: $2b$12$qrOSAxosHjt6RYwvEzEjSe4sSO46TEduBSsei8pUmKAkJ7XLxVLFK
+    n000191032:
+      email: N000191032@npc.com.tw
+      logged_in: false
+      name: Valerie
+      password: $2b$12$m6AbLldGPdJSLviHWhyj/.3xqZu9bfV4v5DvL93RAedto9jd5JFY6
 pre-authorized:
-  emails: []
+  emails:
+  - N000192076@npc.com.tw
+  - N000192234@npc.com.tw

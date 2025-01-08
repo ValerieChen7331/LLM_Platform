@@ -24,14 +24,6 @@ class MainContent:
         if st.session_state.get('agent') == '個人KM':
             # 顯示文件上傳欄位，允許上傳多個 PDF 文件
             st.session_state['source_docs'] = st.file_uploader(label="上傳文檔", type="pdf", accept_multiple_files=True)
-
-            # 檢查是否有上傳文件且確保 source_docs 是一個列表
-            if st.session_state['source_docs']:
-                # 獲取所有上傳文件的名稱列表
-                doc_names = [doc.name for doc in st.session_state['source_docs']]
-                st.session_state['doc_names'] = str(doc_names)  # 儲存文件名稱列表到 session state
-                print(doc_names)  # 調試用 (在生產環境中建議使用 logging 代替)
-
             # 顯示提交按鈕，點擊時觸發 process_uploaded_documents 方法
             st.button("提交文件", on_click=self.controller.process_uploaded_documents, key="submit", help="提交文件")
 

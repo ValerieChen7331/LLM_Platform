@@ -131,16 +131,6 @@ class LLMModel:
         """
         return PromptTemplate(input_variables=["query"], template=template)
 
-    def _llm_direct_prompt_1(self):
-        """生成直接查詢 LLM 所需的提示模板。"""
-        template = """
-        若無特別說明，請使用繁體中文來回答。
-        若需參考歷史紀錄，請以較新的問答為優先。
-        問答歷史紀錄: {chat_history}
-        問題: {query}
-        """
-        return PromptTemplate(input_variables=["query", "chat_history"], template=template)
-
     def _llm_direct_prompt(self):
         """生成直接查詢 LLM 所需的提示模板。"""
         template = """

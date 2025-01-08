@@ -23,6 +23,9 @@ class DocumentService:
             # 在本地向量數據庫中嵌入文檔塊
             self.doc_model.embeddings_on_local_vectordb(document_chunks)
 
+            self.userRecords_db.save_to_file_names()
+            self.devOps_db.save_to_file_names()
+
             self.userRecords_db.save_to_pdf_uploads()
             self.devOps_db.save_to_pdf_uploads()
 
