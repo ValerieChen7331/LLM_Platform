@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# 更新軟體包列表
+apt-get update
+
+# 安裝必要的系統套件
+apt-get install -y poppler-utils        # 用於處理 PDF 的工具，pdf2image 需要
+apt-get install -y tesseract-ocr        # 光學字符識別（OCR）引擎
+apt-get install -y libtesseract-dev     # Tesseract 的開發頭文件
+
+# 安裝必要的 Python 套件
+pip install IPython                     # 互動式 Python 環境
+pip install pytesseract                 # Tesseract 的 Python 包裝器
+
+# 執行 Python 腳本
+python un.py
+python answer.py

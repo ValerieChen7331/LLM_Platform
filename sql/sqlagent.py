@@ -1,21 +1,31 @@
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage
+from langchain_core.messages import HumanMessage
 from langgraph.prebuilt import create_react_agent
 from sql.db_connection import db_connection
 from sql.llm import llm
 import ast
-import streamlit as st
+import re
+import os
 from langchain.agents.agent_toolkits import create_retriever_tool
+from langchain_community.vectorstores import FAISS
+from langchain_openai import OpenAIEmbeddings
+from langchain_community.embeddings import OllamaEmbeddings
+from sql.vector_db_manager import load_vector_db, create_vector_db_from_texts
+import streamlit as st
+from langchain.chains import create_sql_query_chain
+from langchain_core.prompts import PromptTemplate
+from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+import sqlite3
+import pandas as pd
 from apis.llm_api import LLMAPI
-
-# 向量資料庫的相關函式
-from sql.vector_db_manager import load_vector_db
 
 # 全域變數，用來保存已建立的向量資料庫
 vector_db = None
 
 
-# 初始化向量資料庫
 def initialize_vector_db(db):
     global vector_db
     if vector_db is None:
@@ -24,93 +34,187 @@ def initialize_vector_db(db):
     return vector_db
 
 
-# 查詢資料庫並將結果轉換為列表格式
 def query_as_list(db, query):
     res = db.run(query)
     res = [el for sub in ast.literal_eval(res) for el in sub if el]
     return list(set(res))
 
 
-# OpenAI 的 LLM 設定
 from langchain_openai import ChatOpenAI
 
 
-# 定義 LLM 模型
+# from langchain.llms import Ollama
+# from langchain_community.chat_models import ChatOllama
+
 def llm2(model):
-    # 設定 LLM 為 ChatOpenAI
+    # llm = ChatOllama(base_url=openai_api_base, model=model)
     llm = ChatOpenAI(api_key="ollama", model=model)
     return llm
 
 
-# 執行查詢的主要 Agent 函式
 def agent(query, db_name, db_source):
-    # MSSQL DB 連接
+    # MSSQL DB
     db = db_connection(db_name, db_source)
 
-    # 判斷是否使用內部 LLM 模式
     if st.session_state.get('mode') == '內部LLM':
-        # 使用內部 LLM 模型
+        # SQL_LLM
+        # SQL_LLM
+        # openai_api_base = 'http://10.5.61.81:11433/v1'
+        # openai_api_base = 'http://127.0.0.1:11435'
         openai_api_base = 'http://10.5.61.81:11433/v1'
-        model = "codeqwen"
+        # model ="sqlcoder"
+        # model ="deepseek-coder-v2"
+        #model = "codeqwen"
+        # model ="codeqwen"
+        model = "wangshenzhi/llama3.1_8b_chinese_chat"
         SQL_llm = llm(model, openai_api_base)
 
-        # 保存模型名稱以便 DB 紀錄
+        # 為了DB紀錄
         st.session_state['model'] = model
 
-        # 設定對話 LLM
+        # CHAT_LLM(With tool training)
+        openai_api_base = 'http://10.5.61.81:11433/v1'
         model = "wangshenzhi/llama3.1_8b_chinese_chat"
         chat = llm(model, openai_api_base)
+        # chat = llm2(chat_model)
+
     else:
-        # 使用 LLM API
         SQL_llm = LLMAPI.get_llm()
         chat = LLMAPI.get_llm()
 
+    max_retries=9
+    #chat = llm2(chat_model)
     # 初始化或使用已存在的向量資料庫
-    vector_db = initialize_vector_db(db)
-    retriever = vector_db.as_retriever(search_kwargs={"k": 5})
+    llm_context_prompt_template = """
+    You are an SQLite expert. 
+    Given an input question, first create a syntactically correct SQLite query to run, then look at the results of the query and return the answer to the input question.
+    Unless the user specifies in the question a specific number of examples to obtain, query for at most {top_k} results using the FETCH FIRST n ROWS ONLY clause as per SQLite. 
+    You can order the results to return the most informative data in the database.
+    Never query for all columns from a table. You must query only the columns that are needed to answer the question. Wrap each column name in double quotes (") to denote them as delimited identifiers.
+    Pay attention to use only the column names you can see in the tables below. Be careful to not query for columns that do not exist. Also, pay attention to which column is in which table.
+    Pay attention to use TRUNC(SYSDATE) function to get the current date, if the question involves "today".
+    Use the following format:
+    Question: Question here
+    SQLQuery: SQL Query to run
+    SQLResult: Result of the SQLQuery
+    Answer: Final answer here
+    Only use the following tables:
+    {table_info} 
+    Below are a number of examples of questions and their corresponding SQL queries:
 
-    # 檢索工具設定
-    description = """用來查找篩選條件。輸入為專有名詞的近似拼寫，輸出為有效的專有名詞。請使用最接近搜尋的專有名詞。"""
-    retriever_tool = create_retriever_tool(
-        retriever,
-        name="search_proper_nouns",
-        description=description,
-    )
+    User input: table CC17叫做大額費用明細表。其中，若詢問110年02月，代表要找YM='11002'、DP代表部門、ACCT表示會計科目、'6321AA'表示用人費用、AMT表示金額。在前述規則下，請告訴我111年01月，7300部門的用人費用金額合計是多少?
+    SQL query: SELECT SUM(AMT) FROM CC17 WHERE YM = '11101' AND DP = '7300' AND ACCT = '6321AA';
+        
 
-    # 建立系統訊息
-    system = """你是一個專門用來操作 SQL 資料庫的 Agent。
-    根據使用者的問題，創建正確的 SQLite 查詢語句，並查詢結果，返回最相關的答案。
-    除非使用者指定了想要查詢的數量，否則每次最多返回 5 個結果。
-    你可以根據相關欄位來排序結果，並且不應該查詢所有欄位，只查詢與問題相關的欄位。
-    在進行查詢之前，必須仔細檢查查詢語句。如有錯誤，請重新撰寫查詢語句。
+    Question: {input}   
+    """
 
-    不得對資料庫進行 DML 操作（INSERT、UPDATE、DELETE、DROP 等）。
+    LLM_CONTEXT_PROMPT = PromptTemplate.from_template(llm_context_prompt_template)
+    db = db_connection(db_name, db_source)
+    
+    # Get database context (table information)
+    context = db.get_context()
+    table_info = context["table_info"]
 
-    你可以訪問以下資料表：{table_names}
+    # Create the query chain
+    write_query = create_sql_query_chain(SQL_llm, db)
+    execute_query = QuerySQLDataBaseTool(db=db)
+    chain = write_query | execute_query
 
-    如果需要篩選專有名詞，務必使用 "search_proper_nouns" 工具查找相似的值。"""
 
-    # 插入資料庫的可用表名稱
-    system = system.format(table_names=db.get_usable_table_names())
-    print('1. system: ', system)
-    system_message = SystemMessage(content=system)
-    print('2. system_message: ', system_message)
+    # 定義第二個模型的 Prompt，用於驗證 SQL 查詢
+    system = """Double check the user's {dialect} query for common mistakes, including:
+    - Using NOT IN with NULL values
+    - Using UNION when UNION ALL should have been used
+    - Using BETWEEN for exclusive ranges
+    - Data type mismatch in predicates
+    - Properly quoting identifiers
+    - Using the correct number of arguments for functions
+    - Casting to the correct data type
+    - Using the proper columns for joins
+    
+    If there are any of the above mistakes, rewrite the query.
+    If there are no mistakes, just reproduce the original query with no further commentary.
+    
+    Output the final SQL query only."""
+    
+    # 驗證 Prompt Template
+    prompt2 = ChatPromptTemplate.from_messages(
+        [("system", system), ("human", "{query}")]
+    ).partial(dialect=db.dialect)
 
-    # 初始化工具包
-    toolkit = SQLDatabaseToolkit(db=db, llm=SQL_llm)
-    print('3. toolkit: ', toolkit)
-    tools = toolkit.get_tools()
-    print('4. tools: ', tools)
-    tools.append(retriever_tool)
 
-    # 建立 Agent
-    agent_executor = create_react_agent(chat, tools, state_modifier=system_message)
-    print('5. agent_executor: ', agent_executor)
+    validation_chain = prompt2 | SQL_llm | StrOutputParser()
 
-    # 執行查詢並取得結果
-    contents = list(agent_executor.stream({"messages": [HumanMessage(content=query)]}))
-    print('6. contents: ', contents)
 
-    # 回傳結果
-    st.write(list(agent_executor.stream({"messages": [HumanMessage(content=query)]})))
-    return contents[-1]['agent']['messages'][0].content
+
+    # Generate the initial prompt
+    prompt = LLM_CONTEXT_PROMPT.format(input=query, table_info=table_info, top_k=20)
+    
+    retries = 0
+    response = None
+    def fetch_query_result_with_headers(query, db_path):
+        conn = sqlite3.connect("CC17.db")
+        cursor = conn.cursor()
+        cursor.execute(query)
+        result = cursor.fetchall()
+        headers = [description[0] for description in cursor.description]
+        df = pd.DataFrame(result, columns=headers)
+        return df
+    while retries <= max_retries:
+        try:
+            
+            query_result = write_query.invoke({"question": prompt})
+            sql_query = query_result  # 取得 SQL 查詢
+            st.write("sql_query",sql_query)
+            validated_query = validation_chain.invoke({"query": sql_query})
+            st.write("validated_query ",validated_query)
+            execute_result = execute_query.invoke({"query": validated_query})
+            # Invoke the chain with the generated prompt
+            #response = chain.invoke({"question": prompt})
+            response=execute_result 
+            response3=str(response)
+            st.write("execute_result",execute_result)
+            # Check if response contains invalid column name error
+            if re.search(r"error", response3, re.IGNORECASE) or re.search(r"Invalid", response3, re.IGNORECASE) or re.search(r"Error", response3, re.IGNORECASE) :
+                retries += 1 
+                print(f"Retrying... ({retries}/{max_retries})")
+                continue  # Continue retrying if invalid column name error is found
+
+            break  # Break if the response is successful
+
+        except Exception as e:
+            error_message = str(e)
+            print(f"Error occurred: {error_message}")
+            
+            # Check for invalid column name error
+            if "Invalid" or "error" in error_message:
+                print("Invalid column name error detected, retrying...")
+            else:
+                # Raise other exceptions directly
+                raise e
+        if retries>=max_retries:
+            break    
+        retries += 1
+    columns=fetch_query_result_with_headers(sql_query ,db)
+    st.write("fetch_query_result_with_headers",columns)
+
+    # query2=str(query)
+        # sql_query2=str(sql_query)
+        # response2=str(response)
+        # st.write(query2)
+        # st.write(sql_query2)
+        # st.write(response2)
+        # # 將問題、查詢和結果傳遞給 LLM
+        # final_prompt = f"""
+        # Given the following user Question, corresponding SQL query, and SQL result, answer the user Question.
+        # YOU MUST reply in Chinese.
+        # Please reference the following columns: YM、CO、DIV、PLD、DP、ACCT、EGNO、EGNM、URID、MTNO、MTNM、SUMR、QTY、AMT、PURURCOMT、VOCHCSUMER、FBEN、USSHNO、VOCHNO、IADAT、PVNO、SALID、JBDP、IT.
+        # Question: {query2}
+        # SQL Query: {sql_query2}
+        # SQL Result: {response2}
+        # Output Format: Return the answer in DataFrame format with the appropriate column names.
+        # """
+        # final_answer = chat.invoke(final_prompt)
+        # final_answer=str(final_answer)
+    return response

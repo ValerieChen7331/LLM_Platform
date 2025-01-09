@@ -9,10 +9,11 @@ from langchain.prompts import PromptTemplate
 import uuid
 from langchain.schema import Document
 
-from langchain_community.vectorstores import Chroma
+#from langchain_community.vectorstores import Chroma
 from apis.embedding_api import EmbeddingAPI
 from apis.file_paths import FilePaths
 from apis.llm_api import LLMAPI
+from langchain.vectorstores import FAISS
 
 
 # PDF 處理類別，用於處理 PDF 文件的上傳、解析、摘要生成與嵌入向量庫
@@ -143,11 +144,15 @@ class DocumentModel:
         if not documents:
             raise ValueError("No document chunks to embed. Please check the text splitting process.")
 
-        # 使用 Chroma 將文件嵌入本地向量庫
-        Chroma.from_documents(
+        # 使用 FAISS 將文件嵌入本地向量庫
+        vector_store = FAISS.from_documents(
             documents,
-            embedding=self.embedding_function,
-            persist_directory=self.vector_store_dir.as_posix()
+            embedding=self.embedding_function
         )
+
+        # 將向量庫保存到指定的目錄中
+        vector_store.save_local(self.vector_store_dir.as_posix())
+
         logging.info(f"Persisted vector DB at {self.vector_store_dir}")
+
 
