@@ -2,8 +2,8 @@ import streamlit as st
 
 from models.llm_model import LLMModel
 from models.llm_rag import RAGModel
-from models.batabase_userRecords import UserRecordsDB
-from models.batabase_devOps import DevOpsDB
+from models.database_userRecords import UserRecordsDB
+from models.database_devOps import DevOpsDB
 
 from sql.sqlagent import agent
 from sql.sqlagent2 import agent as agent_II

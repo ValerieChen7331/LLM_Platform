@@ -1,6 +1,6 @@
 from services.llm_services import LLMService
 from services.document_services import DocumentService
-from models.batabase_userRecords import UserRecordsDB
+from models.database_userRecords import UserRecordsDB
 import streamlit as st
 import uuid
 import pandas as pd
@@ -153,7 +153,7 @@ class UIController:
         response = self.llm_service.query(query)
         st.chat_message("ai").write(response)
 
-        # 使用 reportlab 生成包含中文的 PDF 並提供下載
+        """# 使用 reportlab 生成包含中文的 PDF 並提供下載
         file_name = f"response_{str(uuid.uuid4())}.pdf"
         file_path = self.save_response_to_pdf_with_chinese(response, file_name)
 
@@ -163,7 +163,7 @@ class UIController:
                 data=f,
                 file_name=file_name,
                 mime="application/pdf"
-            )
+            )"""
 
     def process_uploaded_documents(self):
         # 處理上傳的文件

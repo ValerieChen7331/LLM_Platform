@@ -1,7 +1,7 @@
 import streamlit as st
 from models.document_model import DocumentModel
-from models.batabase_userRecords import UserRecordsDB
-from models.batabase_devOps import DevOpsDB
+from models.database_userRecords import UserRecordsDB
+from models.database_devOps import DevOpsDB
 
 class DocumentService:
     def __init__(self):
@@ -12,16 +12,22 @@ class DocumentService:
 
     def process_uploaded_documents(self):
         try:
-            # 建立臨時文件
-            self.doc_model.create_temporary_files()
-            # 加載文檔
-            documents = self.doc_model.load_documents()
-            # 刪除臨時文件
-            #self.doc_model.delete_temporary_files()
-            # 將文檔拆分成塊
-            document_chunks = self.doc_model.split_documents_into_chunks(documents)
-            # 在本地向量數據庫中嵌入文檔塊
-            self.doc_model.embeddings_on_local_vectordb(document_chunks)
+            """完整的 PDF 處理流程"""
+            # 1. 創建臨時文件
+            temporary_files = self.doc_model.create_temporary_files()
+
+            # 2. 解析每個臨時 PDF 文件
+            for file_name in temporary_files:
+                elements = self.doc_model.partition_pdf_file(file_name)
+
+                # 3. 生成文本和表格的摘要
+                text_elements, table_elements, text_summaries, table_summaries = self.doc_model.summarize_elements(elements)
+
+                # 4. 將摘要轉換為 Document 物件
+                documents = self.doc_model.convert_to_documents(text_elements, text_summaries, table_elements, table_summaries)
+
+                # 5. 將文檔嵌入本地向量庫
+                self.doc_model.embeddings_on_local_vectordb(documents)
 
             self.userRecords_db.save_to_file_names()
             self.devOps_db.save_to_file_names()

@@ -1,6 +1,6 @@
 import streamlit as st
 from controllers.ui_controller import UIController
-from models.batabase_userRecords import UserRecordsDB
+from models.database_userRecords import UserRecordsDB
 from views.main_page_sidebar import Sidebar
 from views.main_page_content import MainContent
 

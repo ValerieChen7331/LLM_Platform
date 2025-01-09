@@ -1,5 +1,5 @@
 import streamlit as st
-from models.batabase_userRecords import UserRecordsDB
+from models.database_userRecords import UserRecordsDB
 from models.document_model import DocumentModel
 
 class Sidebar:
