@@ -1,0 +1,4 @@
+AZURE_OPENAI_ENDPOINT="https://azure-tese1-gpt4.openai.azure.com/"
+AZURE_OPENAI_API_KEY="bb8634b9b3254065b567d3a451efa7d2"
+AZURE_OPENAI_API_VERSION="2023-03-15-preview"
+Embedding_API_VERSION="2023-05-15"

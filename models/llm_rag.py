@@ -17,7 +17,9 @@ class RAGModel:
         # 初始化文件路徑和嵌入函數
         self.file_paths = FilePaths()
         self.output_dir = self.file_paths.get_output_dir()
+        self.vector_store_dir = self.file_paths.get_local_vector_store_dir()
         self.embedding_function = EmbeddingAPI.get_embedding_function()
+
 
     def query_llm_rag(self, query):
         """使用 RAG 查詢 LLM，根據給定的問題和檢索的文件內容返回答案。"""
@@ -26,7 +28,10 @@ class RAGModel:
             llm = LLMAPI.get_llm()
 
             # 建立向量資料庫和檢索器
-            vector_db = Chroma.from_documents(embedding=self.embedding_function)
+            vector_db = Chroma(
+                embedding_function=self.embedding_function,
+                persist_directory=self.vector_store_dir.as_posix()
+            )
             retriever = vector_db.as_retriever(search_kwargs={'k': 3})
 
             # 創建具備聊天記錄感知能力的檢索器
@@ -36,7 +41,7 @@ class RAGModel:
             conversational_rag_chain = self._create_conversational_rag_chain(history_aware_retriever)
 
             # 查詢 RAG，並獲取回答和檢索到的文件
-            result_rag = conversational_rag_chain.run({
+            result_rag = conversational_rag_chain.invoke({
                 'input': query,
                 'chat_history': self._get_chat_history_from_session(),
             })

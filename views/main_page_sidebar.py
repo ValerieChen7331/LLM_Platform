@@ -14,6 +14,7 @@ class Sidebar:
         self._display_new_chat_button()       # 顯示新聊天按鈕
         self._display_agent_selection()       # 顯示助理類型選擇
         self._display_llm_selection()         # 顯示 LLM 模式選項
+        self._display_embedding_selection()
         self._display_chat_history_buttons()  # 顯示聊天記錄按鈕
 
     def _set_sidebar_button_style(self):
@@ -52,7 +53,6 @@ class Sidebar:
                 st.session_state['agent'] = '一般助理'
                 # 點擊按鈕後，啟動新的聊天
                 self.controller.new_chat()
-
 
     def _display_agent_selection(self):
         """顯示助理類型選擇與資料庫選擇"""
@@ -116,30 +116,64 @@ class Sidebar:
     def _display_llm_selection(self):
         """顯示 LLM 模式選項"""
         with st.sidebar:
-            st.title("LLM 選項")
+            st.title("LLM")
 
-            # 顯示 LLM 模式選擇的單選按鈕
-            mode = st.radio("LLM 類型：", ('內部LLM', '外部LLM'))
-            st.session_state['mode'] = mode
+            current_mode = st.session_state.get('mode')  # 取得當前的mode
+            mode_options = ['內部LLM', '外部LLM']
+            selected_mode_index = mode_options.index(current_mode)  # 取得當前mode在選項中的索引位置
 
-            if mode == '內部LLM':
+            selected_mode = st.radio(
+                "LLM 類型:",
+                mode_options,  # mode選項列表
+                index=selected_mode_index  # 預設選擇當前mode
+            )
+            st.session_state['mode'] = selected_mode
+
+            if selected_mode == '內部LLM':
                 # 定義內部 LLM 的選項
-                options = ["Qwen2-Alibaba", "Taiwan-llama3-8b", "Taiwan-llama2-13b"]
+                llm_options = ["Qwen2-Alibaba", "Taiwan-llama3-8b", "Taiwan-llama2-13b"]
+            else:
+                llm_options = ["gpt-4o", "gpt-4o-mini", "gpt-4", "gpt-35-turbo"]
+                # 如果選擇外部 LLM，顯示 API 設置選項
+                # st.session_state['api_base'] = st.text_input('API 地址：', type='password')
+                # st.session_state['api_key'] = st.text_input('API 密鑰：', type='password')
 
-                # 使用已保存的 LLM 選項作為預設值，如果存在且有效
+            # 使用已保存的 LLM 選項作為預設值，如果存在且有效
+            try:
+                # 取得當前選項在列表中的索引位置
+                selected_llm_index = llm_options.index(st.session_state.get('llm_option', llm_options[0]))
+            except ValueError:
+                selected_llm_index = 0  # 如果選項無效，使用第一個作為預設值
+
+            # 顯示選擇框，並更新 session state
+            llm_option = st.selectbox('選擇 LLM：', llm_options, index=selected_llm_index)
+            st.session_state['llm_option'] = llm_option
+
+    def _display_embedding_selection(self):
+        """顯示 Embedding 模式選項"""
+        agent = st.session_state.get('agent')
+
+        # 僅在 agent 為 '個人KM' 時顯示嵌入模型選項
+        if agent == '個人KM':
+            with st.sidebar:
+                st.title("Embedding")
+
+                # 根據 LLM 模式顯示不同的嵌入模型選項
+                mode = st.session_state.get('mode')
+                if mode == '內部LLM':
+                    embedding_options = ["llama3", "bge-m3"]
+                else:
+                    embedding_options = ["text-embedding-3-large", "text-embedding-3-small", "text-embedding-ada-002"]
+
+                # 使用已保存的 embedding 選項作為預設值
                 try:
-                    # 取得當前選項在列表中的索引位置
-                    selected_index = options.index(st.session_state.get('llm_option', options[0]))
+                    selected_embedding_index = embedding_options.index(st.session_state.get('embedding', embedding_options[0]))
                 except ValueError:
-                    selected_index = 0  # 如果選項無效，使用第一個作為預設值
+                    selected_embedding_index = 0  # 如果選項無效，使用第一個作為預設值
 
                 # 顯示選擇框，並更新 session state
-                llm_option = st.selectbox('選擇一個選項：', options, index=selected_index)
-                st.session_state['llm_option'] = llm_option
-            else:
-                # 如果選擇外部 LLM，顯示 API 設置選項
-                st.session_state['api_base'] = st.text_input('API 地址：', type='password')
-                st.session_state['api_key'] = st.text_input('API 密鑰：', type='password')
+                embedding_option = st.selectbox('選擇嵌入模型：', embedding_options, index=selected_embedding_index)
+                st.session_state['embedding'] = embedding_option
 
     def _display_chat_history_buttons(self):
         """顯示側邊欄中的聊天記錄"""
