@@ -135,35 +135,27 @@ class UserRecordsDB(BaseDB):
         }
         for key, value in reset_session_state.items():
             st.session_state[key] = value
+            print(value)
+            print('-------------')
 
     def save_to_database(self, query: str, response: str):
         """將查詢結果保存到資料庫中。"""
 
         # 初始化 data 字典，從 session_state 中獲取數據
         data = {key: st.session_state.get(key, default) for key, default in {
-            'agent': '',
-            'mode': '',
-            'llm_option': '',
-            'model': '',
-            'db_source': '',
-            'db_name': '',
-            'conversation_id': '',
+            'agent': None,
+            'mode': None,
+            'llm_option': None,
+            'model': None,
+            'db_source': None,
+            'db_name': None,
+            'conversation_id': None,
             'active_window_index': 0,
             'num_chat_windows': 0,
-            'title': '',
+            'title': None,
             'user_query': query,
             'ai_response': response
         }.items()}
-
-        # 根據 agent 設置對應的 mode 和 model
-        agent_settings = {
-            '資料庫查找助理': ('內部LLM', 'codeqwen, wangshenzhi/llama3.1_8b_chinese_chat'),
-            '資料庫查找助理2.0': ('內部LLM', 'duckdb-nsql, wangshenzhi/llama3.1_8b_chinese_chat'),
-            'SQL生成助理': ('內部LLM', 'duckdb-nsql')
-        }
-
-        if data['agent'] in agent_settings:
-            data['mode'], data['model'] = agent_settings[data['agent']]
 
         try:
             # 插入資料
@@ -187,9 +179,9 @@ class UserRecordsDB(BaseDB):
 
         # 初始化 data 字典，從 session_state 中獲取數據
         data = {key: st.session_state.get(key, default) for key, default in {
-            'conversation_id': '',
-            'agent': '',
-            'embedding': ''
+            'conversation_id': None,
+            'agent': None,
+            'embedding': None
         }.items()}
 
         try:
@@ -219,8 +211,8 @@ class UserRecordsDB(BaseDB):
 
     def save_to_file_names(self):
         """將查詢結果保存到資料庫中。"""
-        conversation_id = st.session_state.get('conversation_id', '')
-        doc_names = st.session_state.get('doc_names', {})
+        conversation_id = st.session_state.get('conversation_id', None)
+        doc_names = st.session_state.get('doc_names', None)
 
         for tmp_name, org_name in doc_names.items():  # 修正此處，正確解開 doc_names 字典
             try:

@@ -47,14 +47,16 @@ class LLMAPI:
         load_dotenv()
 
         # 从环境变量中获取 API Key、Endpoint 和 API 版本
-        api_key = os.getenv("AZURE_OPENAI_API_KEY", "bb8634b9b3254065b567d3a451efa7d2")
-        api_base = os.getenv("AZURE_OPENAI_ENDPOINT", "https://azure-tese1-gpt4.openai.azure.com/")
-        api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2023-03-15-preview")
+        api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        api_base = os.getenv("AZURE_OPENAI_ENDPOINT")
+        api_version = os.getenv("AZURE_OPENAI_API_VERSION")
 
-        print(api_key,api_base,api_version)
+        print("1",api_key)
+        print("2",api_base)
+        print("3",api_version)
 
         if not all([api_key, api_base, api_version]):
-            raise ValueError("缺少必要的环境变量")
+            raise ValueError("缺少API Key、Endpoint 或 API Version")
 
         # 初始化 Azure ChatOpenAI 模型
         llm = AzureChatOpenAI(

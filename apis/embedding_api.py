@@ -22,7 +22,7 @@ class EmbeddingAPI:
         # 定義內部可用的 embedding 模型與 base_url
         embedding_models = {
             "llama3": "http://10.5.61.81:11435",
-            "bge-m3": "http://10.5.61.81:11435"
+            "bge-m3": "http://10.5.61.81:11433"
         }
 
         # 獲取 session 中的模型設定，若無則設為 'llama3'
@@ -44,14 +44,14 @@ class EmbeddingAPI:
     def _get_external_embeddings():
         """獲取外部 Azure 模型的 embeddings"""
         # 獲取 session 中的外部模型設定，若無則設為 'text-embedding-ada-002'
-        model = st.session_state.get('embedding', 'text-embedding-ada-002')
+        model = st.session_state.get('embedding', 'text-embedding-3-large')
         # 加载 .env 文件中的环境变量
         load_dotenv()
 
         # 从环境变量中获取 API Key、Endpoint 和 API 版本
-        api_key = os.getenv("AZURE_OPENAI_API_KEY", "bb8634b9b3254065b567d3a451efa7d2")
-        api_base = os.getenv("AZURE_OPENAI_ENDPOINT", "https://azure-tese1-gpt4.openai.azure.com/")
-        embedding_api_version = os.getenv("Embedding_API_VERSION", "2023-05-15")
+        api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        api_base = os.getenv("AZURE_OPENAI_ENDPOINT")
+        embedding_api_version = os.getenv("Embedding_API_VERSION")
 
         # 使用 Azure OpenAI API 來建立 embeddings
         embeddings = AzureOpenAIEmbeddings(

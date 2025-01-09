@@ -9,7 +9,7 @@ import re
 import os
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import OllamaEmbeddings
-VECTOR_DB_PATH = "sql/vector_db.faiss"
+VECTOR_DB_PATH = "sql/sql/vector_db.faiss"
 
 def save_vector_db(vector_db):
     """保存向量資料庫到檔案"""
@@ -18,12 +18,12 @@ def save_vector_db(vector_db):
 def load_vector_db():
     """從檔案中載入向量資料庫"""
     if os.path.exists(VECTOR_DB_PATH):
-        return FAISS.load_local(VECTOR_DB_PATH, OllamaEmbeddings(base_url="http://10.5.61.81:11435", model="llama3"),allow_dangerous_deserialization=True)
+        return FAISS.load_local(VECTOR_DB_PATH, OllamaEmbeddings(base_url="http://10.5.61.81:11433", model="bge-m3"),allow_dangerous_deserialization=True)
     return None
 
 def create_vector_db_from_texts(texts):
     """從文本生成向量資料庫"""
-    embeddings = OllamaEmbeddings(base_url="http://10.5.61.81:11435", model="llama3")
+    embeddings = OllamaEmbeddings(base_url="http://10.5.61.81:11433", model="bge-m3")
     
     vector_db = FAISS.from_texts(texts, embeddings)
     print("emb finish")

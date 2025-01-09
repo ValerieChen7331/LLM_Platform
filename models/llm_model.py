@@ -85,8 +85,12 @@ class LLMModel:
             formatted_prompt = prompt_template.format(query=query)  # 格式化prompt模板，插入query
 
             title = llm.invoke(formatted_prompt)    # 調用 LLM 生成 window title
-            st.session_state['title'] = title.content
-            return title.content
+            if st.session_state.get('mode') == '內部LLM':
+                pass
+            else:
+                title = title.content
+            st.session_state['title'] = title
+            return title
 
         except Exception as e:
             return st.error(f"查詢 set_window_title 時發生錯誤: {e}")

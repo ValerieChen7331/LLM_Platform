@@ -88,7 +88,7 @@ class DevOpsDB(BaseDB):
             'ai_response': response
         }.items()}
 
-        # 根據 agent 設置對應的 mode 和 model
+        """# 根據 agent 設置對應的 mode 和 model
         agent_settings = {
             '資料庫查找助理': ('內部LLM', 'codeqwen, wangshenzhi/llama3.1_8b_chinese_chat'),
             '資料庫查找助理2.0': ('內部LLM', 'duckdb-nsql, wangshenzhi/llama3.1_8b_chinese_chat'),
@@ -96,7 +96,7 @@ class DevOpsDB(BaseDB):
         }
 
         if data['agent'] in agent_settings:
-            data['mode'], data['model'] = agent_settings[data['agent']]
+            data['mode'], data['model'] = agent_settings[data['agent']]"""
 
         try:
             self.execute_query(

@@ -3,6 +3,9 @@ from langchain.chains import create_sql_query_chain
 from sql.db_connection import db_connection
 from sql.llm import llm
 
+import streamlit as st
+from apis.llm_api import LLMAPI
+
 
 def query(question,db_name,db_source):
     # MSSQL DB
@@ -11,13 +14,19 @@ def query(question,db_name,db_source):
     # print(db.get_usable_table_names())
     # print(db.run("SELECT * FROM Artist LIMIT 10;"))
 
-    # SQL_LLM
-    openai_api_base = 'http://10.5.61.81:11433/v1'
-    # model ="sqlcoder"
-    # model ="deepseek-coder-v2"
-    model ="duckdb-nsql"
-    # model ="codeqwen"
-    SQL_llm = llm(model,openai_api_base)
+    if st.session_state.get('mode') == '內部LLM':
+        # SQL_LLM
+        openai_api_base = 'http://10.5.61.81:11433/v1'
+        # model ="sqlcoder"
+        # model ="deepseek-coder-v2"
+        model ="duckdb-nsql"
+        # model ="codeqwen"
+        SQL_llm = llm(model,openai_api_base)
+
+        # 為了DB紀錄
+        st.session_state['model'] = model
+    else:
+        SQL_llm = LLMAPI.get_llm()
 
     # Chain
     chain = create_sql_query_chain(SQL_llm, db)

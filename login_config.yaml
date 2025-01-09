@@ -9,5 +9,25 @@ credentials:
       logged_in: false
       name: charlie
       password: $2b$12$qrOSAxosHjt6RYwvEzEjSe4sSO46TEduBSsei8pUmKAkJ7XLxVLFK
+    daniel:
+      email: N000192234@npc.com.tw
+      logged_in: false
+      name: danielhua
+      password: $2b$12$Pj0SRNZC1LmztcFpXX//t.6rxbAfEHWDQdp8QLWuwXGYOeO4Sh2b6
+    n000191032:
+      email: N000191032@npc.com.tw
+      logged_in: false
+      name: Valerie
+      password: $2b$12$YI2bUomcAeBCYozCGk2gWe7hgMR70uA/j6tiAb/XXkJ4sFyM8r3ea
+    shao:
+      email: N000192076@npc.com.tw
+      logged_in: false
+      name: shao
+      password: $2b$12$/5Sw31T6Xwr0DlDRARHAM.RsPm.9qmqNT0gyi23feKE6h5QT4lLT2
+    zmado:
+      email: N000161772@npc.com.tw
+      logged_in: false
+      name: Zmado
+      password: $2b$12$v29sXGhvqPEILE3sqZD4ceHWT33F6n8SusEXYMqaPlEGsXOLNUbwC
 pre-authorized:
-  emails: [N000191032@npc.com.tw,N000192076@npc.com.tw,N000192234@npc.com.tw]
+  emails: []

@@ -82,7 +82,6 @@ class UIController:
 
     def new_chat(self):
         # 創建新聊天窗口，更新 session 狀態
-        print(st.session_state.get('chat_history'))
         if st.session_state.get('empty_window_exists'):
             st.session_state['active_window_index'] = st.session_state.get('num_chat_windows') - 1
         else:
@@ -92,7 +91,7 @@ class UIController:
         st.session_state['conversation_id'] = str(uuid.uuid4())
         self.userRecords_db.reset_session_state_to_defaults()
         st.session_state['empty_window_exists'] = True
-        st.rerun()  # 刷新頁面
+
 
     def delete_chat_history_and_update_indexes(self, delete_index):
         # 刪除指定聊天窗口索引的聊天歷史記錄

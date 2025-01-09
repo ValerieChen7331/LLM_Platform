@@ -7,20 +7,31 @@ from sqlalchemy.exc import OperationalError
 from sql.db_connection import db_connection
 from sql.llm import llm
 
-# SQL_LLM
-openai_api_base = 'http://10.5.61.81:11433/v1'
-# model ="sqlcoder:15b"
-# model ="deepseek-coder-v2"
-model ="duckdb-nsql"
-# model ="codeqwen"
-SQL_llm = llm(model,openai_api_base)
+import streamlit as st
+from apis.llm_api import LLMAPI
 
-# CHAT_LLM(With tool training)
-openai_api_base = 'http://10.5.61.81:11433/v1'
-model ="wangshenzhi/llama3.1_8b_chinese_chat"
-chat = llm(model,openai_api_base)
+if st.session_state.get('mode') == '內部LLM':
+    # SQL_LLM
+    openai_api_base = 'http://10.5.61.81:11433/v1'
+    # model ="sqlcoder:15b"
+    # model ="deepseek-coder-v2"
+    model ="duckdb-nsql"
+    # model ="codeqwen"
+    SQL_llm = llm(model,openai_api_base)
 
-    
+    # 為了DB紀錄
+    st.session_state['model'] = model
+
+    # CHAT_LLM(With tool training)
+    openai_api_base = 'http://10.5.61.81:11433/v1'
+    model ="wangshenzhi/llama3.1_8b_chinese_chat"
+    chat = llm(model,openai_api_base)
+
+else:
+    SQL_llm = LLMAPI.get_llm()
+    chat = LLMAPI.get_llm()
+
+
 def agent(question,db_name,db_source):
     # MSSQL DB
     db = db_connection(db_name,db_source) 
@@ -78,7 +89,8 @@ def agent(question,db_name,db_source):
 
 
     response = chain.invoke({'input': question})
-    return response.content
+
+    return response
 
 
 

@@ -12,9 +12,13 @@ from langchain_community.vectorstores import FAISS
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.embeddings import OllamaEmbeddings
 from sql.vector_db_manager import load_vector_db, create_vector_db_from_texts
+import streamlit as st
+
+from apis.llm_api import LLMAPI
 
 # 全域變數，用來保存已建立的向量資料庫
 vector_db = None
+
 
 def initialize_vector_db(db):
     global vector_db
@@ -23,28 +27,58 @@ def initialize_vector_db(db):
         vector_db = load_vector_db()
     return vector_db
 
+
 def query_as_list(db, query):
     res = db.run(query)
     res = [el for sub in ast.literal_eval(res) for el in sub if el]
     return list(set(res))
 
+
+from langchain_openai import ChatOpenAI
+
+
+# from langchain.llms import Ollama
+# from langchain_community.chat_models import ChatOllama
+
+def llm2(model):
+    # llm = ChatOllama(base_url=openai_api_base, model=model)
+    llm = ChatOpenAI(api_key="ollama", model=model)
+    return llm
+
+
 def agent(query, db_name, db_source):
     # MSSQL DB
     db = db_connection(db_name, db_source)
 
-    # SQL_LLM
-    openai_api_base = 'http://10.5.61.81:11433/v1'
-    model = "codeqwen"
-    SQL_llm = llm(model, openai_api_base)
+    if st.session_state.get('mode') == '內部LLM':
+        # SQL_LLM
+        # SQL_LLM
+        # openai_api_base = 'http://10.5.61.81:11433/v1'
+        # openai_api_base = 'http://127.0.0.1:11435'
+        openai_api_base = 'http://10.5.61.81:11433/v1'
+        # model ="sqlcoder"
+        # model ="deepseek-coder-v2"
+        model = "codeqwen"
+        # model ="codeqwen"
+        SQL_llm = llm(model, openai_api_base)
 
-    # CHAT_LLM(With tool training)
-    chat_model = "wangshenzhi/llama3.1_8b_chinese_chat"
-    chat = llm(chat_model, openai_api_base)
+        # 為了DB紀錄
+        st.session_state['model'] = model
+
+        # CHAT_LLM(With tool training)
+        openai_api_base = 'http://10.5.61.81:11433/v1'
+        model = "wangshenzhi/llama3.1_8b_chinese_chat"
+        chat = llm(model, openai_api_base)
+        # chat = llm2(chat_model)
+
+    else:
+        SQL_llm = LLMAPI.get_llm()
+        chat = LLMAPI.get_llm()
 
     # 初始化或使用已存在的向量資料庫
     vector_db = initialize_vector_db(db)
     retriever = vector_db.as_retriever(search_kwargs={"k": 5})
-    
+
     description = """Use to look up values to filter on. Input is an approximate spelling of the proper noun, output is \
     valid proper nouns. Use the noun most similar to the search."""
     retriever_tool = create_retriever_tool(
@@ -52,6 +86,7 @@ def agent(query, db_name, db_source):
         name="search_proper_nouns",
         description=description,
     )
+    context = db.get_context()
 
     system = """You are an agent designed to interact with a SQL database.
     Given an input question, create a syntactically correct SQLite query to run, then look at the results of the query and return the answer.
@@ -72,7 +107,7 @@ def agent(query, db_name, db_source):
     )
 
     system_message = SystemMessage(content=system)
-    
+
     # TOOLKIT
     toolkit = SQLDatabaseToolkit(db=db, llm=SQL_llm)
     tools = toolkit.get_tools()
@@ -83,6 +118,8 @@ def agent(query, db_name, db_source):
 
     # 結果
     contents = list(agent_executor.stream({"messages": [HumanMessage(content=query)]}))
-    #return contents[-1]['agent']['messages'][0].content
-    return retriever_tool.invoke("PA廠推高機輪胎龜裂")
+    st.write(list(agent_executor.stream({"messages": [HumanMessage(content=query)]})))
+    print("00000000000000000000011")
+    return contents[-1]['agent']['messages'][0].content
+    # return retriever_tool.invoke("PA廠推高機輪胎龜裂")
 
