@@ -1,12 +1,11 @@
 import streamlit as st
 from models.database_userRecords import UserRecordsDB
 from models.document_model import DocumentModel
-from controllers.ui_controller import UIController
 
 class Sidebar:
-    def __init__(self):
+    def __init__(self, controller):
         """初始化側邊欄物件"""
-        self.controller = UIController()
+        self.controller = controller
         self.userRecords_db = UserRecordsDB()
         self.document_model = DocumentModel()
 

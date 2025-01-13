@@ -1,12 +1,10 @@
 import streamlit as st
-from controllers.ui_controller import UIController
-from models.database_userRecords import UserRecordsDB
 
 class MainContent:
-    def __init__(self):
+    def __init__(self, controller, userRecords_db):
         """初始化主內容物件"""
-        self.controller = UIController()
-        self.userRecords_db = UserRecordsDB()
+        self.controller = controller
+        self.userRecords_db = userRecords_db
 
     def display(self):
         """顯示主內容"""

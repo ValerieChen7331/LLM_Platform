@@ -30,4 +30,4 @@ credentials:
       name: Zmado
       password: $2b$12$v29sXGhvqPEILE3sqZD4ceHWT33F6n8SusEXYMqaPlEGsXOLNUbwC
 pre-authorized:
-  emails: []
+  emails: [N000192533@npc.com.tw]
