@@ -1,16 +1,13 @@
 # import logging
-
 from apis.llm_api import LLMAPI
-from apis.embedding_api import EmbeddingAPI
-from apis.file_paths import FilePaths
-
+# from apis.embedding_api import EmbeddingAPI
+# from apis.file_paths import FilePaths
 # from langchain.prompts import PromptTemplate
 # from langchain.prompts import ChatPromptTemplate
-
 from langchain.chains import ConversationChain
 from langchain.memory import ConversationBufferMemory
-from langchain.memory import ChatMessageHistory
-
+# from langchain.memory import ChatMessageHistory
+from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.prompts import PromptTemplate
 
@@ -20,12 +17,13 @@ class LLMModel:
         self.chat_session_data = chat_session_data
         self.mode = chat_session_data.get('mode')
         self.llm_option = chat_session_data.get('llm_option')
-        username = chat_session_data.get('username')
-        conversation_id = chat_session_data.get('conversation_id')
+
+        # username = chat_session_data.get('username')
+        # conversation_id = chat_session_data.get('conversation_id')
         # 獲取檔案路徑
-        file_paths = FilePaths(username, conversation_id)
-        self.output_dir = file_paths.get_output_dir()
-        self.vector_store_dir = file_paths.get_local_vector_store_dir()
+        # file_paths = FilePaths(username, conversation_id)
+        # self.output_dir = file_paths.get_output_dir()
+        # self.vector_store_dir = file_paths.get_local_vector_store_dir()
     def query_llm_direct(self, query):
         # 獲取 active_window_index
         active_window_index = self.chat_session_data.get('active_window_index', 0)

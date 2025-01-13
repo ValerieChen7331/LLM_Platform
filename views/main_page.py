@@ -1,33 +1,42 @@
 import streamlit as st
-from controllers.ui_controller import UIController
+from controllers.initialize import SessionInitializer
 from views.main_page_sidebar import Sidebar
 from views.main_page_content import MainContent
 from services.llm_services import LLMService
 
-class MainPage:
-    def __init__(self):
-        """初始化主頁面物件"""
-        self.controller = UIController()
-        self.chat_session_data = self.controller.initialize_session_state()
-        self.chat_session_data["username"] = st.session_state.get("username")
-        self.sidebar = Sidebar(self.chat_session_data)
-        self.main_content = MainContent(self.chat_session_data)
-        self.llm_service = LLMService(self.chat_session_data)
 
+class MainPage:
+    st.session_state["is_initialized"] = False
     def show(self):
         """顯示主頁面"""
-        self.sidebar.display()       # 顯示側邊欄
-        self.main_content.display()  # 顯示主內容
+        # 只在第一次初始化時執行
+        if not st.session_state.get("is_initialized"):
+            username = st.session_state.get("username")
+            st.session_state["chat_session_data"] = SessionInitializer(username).initialize_session_state()
+            st.session_state["is_initialized"] = True
+            print("SessionInitializer(username)...")
+
+        # 獲取會話數據
+        chat_session_data = st.session_state.get("chat_session_data")
+        # print('data: ', chat_session_data)
+
+        # 顯示主頁面
+        Sidebar(chat_session_data).display()
+        MainContent(chat_session_data).display()
 
         # 處理聊天輸入
-        if query := st.chat_input():   # 如果使用者在聊天框中輸入了內容
+        if query := st.chat_input():
             st.chat_message("human").write(query)
-            response, self.chat_session_data = self.llm_service.query(query)
-            st.chat_message("ai").write(response)
+            try:
+                response, chat_session_data = LLMService(chat_session_data).query(query)
+                st.chat_message("ai").write(response)
+            except Exception as e:
+                st.error(f"An error occurred while processing your request: {e}")
 
-def main():
-    """主函數"""
-    MainPage().show()
 
-if __name__ == "__main__":
-    main()
+# def main():
+#     """主函數"""
+#     MainPage().show()
+#
+# if __name__ == "__main__":
+#     main()

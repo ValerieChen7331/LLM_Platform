@@ -1,4 +1,3 @@
-import streamlit as st
 from datetime import datetime
 from models.database_base import BaseDB
 from apis.file_paths import FilePaths
@@ -7,19 +6,14 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 class DevOpsDB:
-    def __init__(self, chat_session_data):
+    def __init__(self):
         """初始化 DevOpsDB 類別。"""
-
-        username = chat_session_data.get('username')
-        conversation_id = chat_session_data.get('conversation_id')
-        self.chat_session_data = chat_session_data
-
-        self.file_paths = FilePaths(username, conversation_id)
         # 設定資料庫路徑
-        self.db_path = self.file_paths.get_devOps_dir().joinpath('DevOpsDB.db')
-        # 創建 BaseDB 實例來處理資料庫操作
+        file_paths = FilePaths()
+        self.db_path = file_paths.get_developer_dir().joinpath('DevOpsDB.db')
+        print('22222222', self.db_path)
         self.base_db = BaseDB(self.db_path)
-        # 初始化資料庫表格
+
         # 初始化資料庫表格
         self.base_db.ensure_db_path_exists()
         self._init_db()
@@ -79,19 +73,20 @@ class DevOpsDB:
             self.base_db.execute_query(file_names_query)
             logging.info("DevOpsDB 資料庫初始化成功。")
 
-    def save_to_database(self, query: str, response: str):
+    def save_to_database(self, query: str, response: str, chat_session_data):
         """
         將查詢結果保存到資料庫中。
 
         Args:
             query (str): 使用者的查詢。
             response (str): AI 回應的結果。
+            chat_session_data (dict): 聊天會話的數據，包括歷史記錄和其他相關資訊。
         """
         # 取得當前時間
         current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         # 初始化資料字典，從 chat_session_data 中獲取數據
-        data = {key: self.chat_session_data.get(key, default) for key, default in {
+        data = {key: chat_session_data.get(key, default) for key, default in {
             'upload_time': current_time,
             'username': '',
             'agent': '',
@@ -124,13 +119,13 @@ class DevOpsDB:
         except Exception as e:
             logging.error(f"保存到 DevOpsDB (chat_history) 資料庫時發生錯誤: {e}")
 
-    def save_to_pdf_uploads(self):
+    def save_to_pdf_uploads(self, chat_session_data):
         """將 PDF 上傳記錄保存到資料庫中。"""
         # 取得當前時間
         current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         # 初始化資料字典，從 chat_session_data 中獲取數據
-        data = {key: self.chat_session_data.get(key, default) for key, default in {
+        data = {key: chat_session_data.get(key, default) for key, default in {
             'upload_time': current_time,
             'username': '',
             'conversation_id': '',
@@ -152,15 +147,15 @@ class DevOpsDB:
         except Exception as e:
             logging.error(f"保存到 DevOpsDB (pdf_uploads) 資料庫時發生錯誤: {e}")
 
-    def save_to_file_names(self):
+    def save_to_file_names(self, chat_session_data):
         """將文件名稱記錄保存到資料庫中。"""
         # 取得當前時間
         upload_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         # 從 chat_session_data 獲取使用者名稱和對話 ID
-        username = self.chat_session_data.get('username', '')
-        conversation_id = self.chat_session_data.get('conversation_id', '')
+        username = chat_session_data.get('username', '')
+        conversation_id = chat_session_data.get('conversation_id', '')
         # 獲取文件名稱字典
-        doc_names = self.chat_session_data.get('doc_names', {})
+        doc_names = chat_session_data.get('doc_names', {})
 
         for tmp_name, org_name in doc_names.items():
             try:

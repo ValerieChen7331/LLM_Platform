@@ -17,18 +17,36 @@ class LLMAPI:
     @staticmethod
     def _get_internal_llm(llm_option):
         """獲取內部 LLM 模型"""
-        api_base = 'http://10.5.61.81:11434'
+        api_base_34 = 'http://10.5.61.81:11434'
+        model_name = "cwchang/llama-3-taiwan-8b-instruct:f16"
+        api_base_36 = "http://10.5.61.81:11437"
 
         # 定義內部 LLM 模型選項
-        llm_models = {
+        llm_model_names = {
             "Qwen2-Alibaba": "qwen2:7b",
-            # Traditional Mandarin
             "Taiwan-llama3-8b": "SimonPu/llama-3-taiwan-8b-instruct-dpo",
-            # Traditional Mandarin---時好時壞----
-            "Taiwan-llama2-13b": "wangrongsheng/taiwanllm-13b-v2.0-chat"
+
+            "Gemma2": "gemma2:latest",
+            "Gemma2:27b": "gemma2:27b-instruct-q5_0",
+
+            "Taiwan-llama3-f16": "cwchang/llama-3-taiwan-8b-instruct:f16",
+            "Taide-llama3-8b-f16": "jcai/llama3-taide-lx-8b-chat-alpha1:f16"
         }
+
+        llm_api_bases = {
+            "Qwen2-Alibaba": api_base_34,
+            "Taiwan-llama3-8b": api_base_34,
+
+            "Gemma2": api_base_36,
+            "Gemma2:27b": api_base_36,
+
+            "Taiwan-llama3-f16": api_base_36,
+            "Taide-llama3-8b-f16": api_base_36
+        }
+
         # 確認選擇的模型是否有效
-        model = llm_models.get(llm_option)
+        model = llm_model_names.get(llm_option)
+        api_base = llm_api_bases.get(llm_option)
         if not model:
             raise ValueError(f"無效的內部模型選項：{llm_option}")
 

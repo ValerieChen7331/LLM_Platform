@@ -1,39 +1,37 @@
 import logging
 import tempfile
-import streamlit as st
-
 from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import Chroma
-# from langchain_chroma import Chroma
-from langchain.schema.document import Document
+# from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 from apis.file_paths import FilePaths
 from apis.embedding_api import EmbeddingAPI
 from pathlib import Path
+import os
 
-from unstructured.partition.pdf import partition_pdf
-from apis.llm_api import LLMAPI
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
+# from langchain_chroma import Chroma
+# from langchain.schema.document import Document
+# from unstructured.partition.pdf import partition_pdf
+# from apis.llm_api import LLMAPI
+# from langchain.prompts import PromptTemplate
+# from langchain.chains import LLMChain
 
 
+os.environ["CHROMA_TELEMETRY"] = "False"
 
 # 設定日誌記錄的級別為 INFO
 logging.basicConfig(level=logging.INFO)
 
 class DocumentModel:
     def __init__(self, chat_session_data):
-        # 初始化文件路徑和嵌入函數
-        username = chat_session_data.get("username")
-        conversation_id = chat_session_data.get("conversation_id")
-        mode = chat_session_data.get("mode")
-        embedding = chat_session_data.get("embedding")
-        print(chat_session_data)
-
-        self.file_paths = FilePaths(username, conversation_id)
-        self.tmp_dir = self.file_paths.get_tmp_dir()
-        self.vector_store_dir = self.file_paths.get_local_vector_store_dir()
-        self.embedding_function = EmbeddingAPI.get_embedding_function(mode, embedding)
+        # 初始化 hat_session_data
+        self.chat_session_data = chat_session_data
+        # 初始化文件路徑
+        self.file_paths = FilePaths()
+        username = self.chat_session_data.get("username")
+        conversation_id = self.chat_session_data.get("conversation_id")
+        self.tmp_dir = self.file_paths.get_tmp_dir(username, conversation_id)
+        self.vector_store_dir = self.file_paths.get_local_vector_store_dir(username, conversation_id)
 
     def create_temporary_files(self, source_docs):
         """建立臨時文件並返回檔案名稱對應關係。"""
@@ -77,6 +75,7 @@ class DocumentModel:
                 logging.error(f"Error deleting file {file}: {e}")
 
     def split_documents_into_chunks(self, documents):
+        print(documents)
         # 將文件拆分成塊
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=500,
@@ -89,12 +88,15 @@ class DocumentModel:
 
     def embeddings_on_local_vectordb(self, document_chunks):
         # 將文檔塊嵌入本地向量數據庫，並返回檢索器設定
+        mode = self.chat_session_data.get("mode")
+        embedding = self.chat_session_data.get("embedding")
+        embedding_function = EmbeddingAPI.get_embedding_function(mode, embedding)
         if not document_chunks:
             raise ValueError("No document chunks to embed. Please check the text splitting process.")
 
         Chroma.from_documents(
-            document_chunks,
-            embedding=self.embedding_function,
+            documents=document_chunks,
+            embedding=embedding_function,
             persist_directory=self.vector_store_dir.as_posix()
         )
         logging.info(f"Persisted vector DB at {self.vector_store_dir}")

@@ -11,6 +11,7 @@ class EmbeddingAPI:
         if mode == '內部LLM':
             return EmbeddingAPI._get_internal_embeddings(embedding)
         else:
+
             return EmbeddingAPI._get_external_embeddings(embedding)
 
     @staticmethod
@@ -19,7 +20,7 @@ class EmbeddingAPI:
         # 定義內部可用的 embedding 模型與 base_url
         embedding_models = {
             "llama3": "http://10.5.61.81:11435",
-            "bge-m3": "http://10.5.61.81:11433"
+            #"bge-m3": "http://10.5.61.81:11433"
         }
         # 檢查模型名稱是否有效
         base_url = embedding_models.get(embedding)
@@ -31,7 +32,7 @@ class EmbeddingAPI:
         return embeddings
 
     @staticmethod
-    def _get_external_embeddings(model):
+    def _get_external_embeddings(embedding):
         """獲取外部 Azure 模型的 embeddings"""
         # 加载 .env 文件中的环境变量
         load_dotenv()
@@ -43,7 +44,7 @@ class EmbeddingAPI:
 
         # 使用 Azure OpenAI API 來建立 embeddings
         embeddings = AzureOpenAIEmbeddings(
-            model=model,
+            model=embedding,
             azure_endpoint=api_base,
             api_key=api_key,
             openai_api_version=embedding_api_version,

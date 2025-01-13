@@ -1,113 +1,98 @@
 import streamlit as st
 import pandas as pd
+import sqlite3
+import logging
 
 from apis.llm_api import LLMAPI
 from apis.embedding_api import EmbeddingAPI
 from apis.file_paths import FilePaths
 
-from langchain_community.vectorstores import Chroma
-from langchain_core.runnables import RunnableWithMessageHistory
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.memory import ChatMessageHistory
-from langchain.chains import create_history_aware_retriever, create_retrieval_chain
-from langchain.chains.combine_documents import create_stuff_documents_chain
+# from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
+from langchain.prompts import PromptTemplate
+# from langchain.prompts import ChatPromptTemplate
+from langchain_community.chat_message_histories import ChatMessageHistory
+
+# from langchain.chains import ConversationChain
+from langchain.chains import ConversationalRetrievalChain
+# from langchain.memory import ConversationBufferMemory
+# from langchain.memory import ChatMessageHistory
 
 class RAGModel:
-    def __init__(self):
-        # 初始化文件路徑和嵌入函數
-        self.file_paths = FilePaths()
-        self.output_dir = self.file_paths.get_output_dir()
-        self.vector_store_dir = self.file_paths.get_local_vector_store_dir()
-        self.embedding_function = EmbeddingAPI.get_embedding_function()
+    def __init__(self, chat_session_data):
+        # 初始化 hat_session_data
+        self.chat_session_data = chat_session_data
+        self.mode = chat_session_data.get("mode")
+        self.llm_option = chat_session_data.get('llm_option')
+
+        # 初始化文件路徑
+        file_paths = FilePaths()
+        self.output_dir = file_paths.get_output_dir()
+        username = chat_session_data.get("username")
+        conversation_id = chat_session_data.get("conversation_id")
+        self.vector_store_dir = file_paths.get_local_vector_store_dir(username, conversation_id)
 
 
     def query_llm_rag(self, query):
         """使用 RAG 查詢 LLM，根據給定的問題和檢索的文件內容返回答案。"""
-        try:
-            # 初始化語言模型，使用 "gpt-3.5-turbo" 模型，溫度設為 0，確保回答穩定
-            llm = LLMAPI.get_llm()
+        # 初始化語言模型
+        llm = LLMAPI.get_llm(self.mode, self.llm_option)
+        # 初始化 embedding 模型
+        embedding = self.chat_session_data.get("embedding")
+        embedding_function = EmbeddingAPI.get_embedding_function(self.mode, embedding)
 
-            # 建立向量資料庫和檢索器
-            vector_db = Chroma(
-                embedding_function=self.embedding_function,
-                persist_directory=self.vector_store_dir.as_posix()
-            )
-            retriever = vector_db.as_retriever(search_kwargs={'k': 3})
+        # 建立向量資料庫和檢索器
+        vector_db = Chroma(
+            embedding_function=embedding_function,
+            persist_directory=self.vector_store_dir.as_posix()
+        )
+        retriever = vector_db.as_retriever(search_kwargs={'k': 3})
 
-            # 創建具備聊天記錄感知能力的檢索器
-            history_aware_retriever = self._create_history_aware_retriever(llm, retriever)
+        qa_chain = ConversationalRetrievalChain.from_llm(
+            llm=llm,  # 獲取 LLM API 物件
+            retriever=retriever,  # 設置檢索器
+            return_source_documents=True,  # 返回檢索到的文件
+            combine_docs_chain_kwargs={"prompt": self._rag_prompt()}  # prompt 模板
+        )
 
-            # 創建具聊天記錄功能的檢索增強生成鏈
-            conversational_rag_chain = self._create_conversational_rag_chain(history_aware_retriever)
+        # !!修改 chat_history!
+        chat_history = []
+        # 使用 RAG 查詢 LLM，生成答案
+        result_rag = qa_chain.invoke({'question': query, 'chat_history': chat_history})
 
-            # 查詢 RAG，並獲取回答和檢索到的文件
-            result_rag = conversational_rag_chain.invoke({
-                'input': query,
-                'chat_history': self._get_chat_history_from_session(),
-            })
+        response = result_rag.get('answer', '')  # 取得回答
+        retrieved_documents = result_rag.get('source_documents', [])  # 取得檢索到的文件
+        print('2. retrieved_documents: ', retrieved_documents)
 
-            response = result_rag.get('answer', '')  # 取得回答
-            retrieved_documents = result_rag.get('source_documents', [])  # 取得檢索到的文件
+        # 保存檢索到的數據到 CSV 文件
+        self._save_retrieved_data_to_csv(query, retrieved_documents, response)
+        return response, retrieved_documents
 
-            # 保存檢索到的數據到 CSV 文件
-            self._save_retrieved_data_to_csv(query, retrieved_documents, response)
-
-            return response, retrieved_documents
-
-        except Exception as e:
-            # 當發生錯誤時顯示錯誤訊息
-            return st.error(f"查詢 query_llm_rag 時發生錯誤: {e}"), []
-
-    def _create_history_aware_retriever(self, llm, retriever):
-        """創建具備聊天記錄感知能力的檢索器。"""
-        contextualize_q_system_prompt = """
-            根據聊天記錄和最新的使用者問題，\
-            該問題可能參考了聊天記錄中的上下文，請將其重構為一個可以不依賴聊天記錄就能理解的問題。\
-            不要回答問題，只需重新表述，若無需表述則保持不變。
+    def _rag_prompt(self):
+        """生成 RAG 查詢 LLM 所需的提示模板。"""
+        template = """
+        請根據「文件內容」回答問題。如果以下資訊不足，請如實告知，勿自行編造!
+        若無特別說明，請使用繁體中文來回答問題。
+        文件內容: {context}
+        問題: {question}
+        答案:
         """
-        contextualize_q_prompt = ChatPromptTemplate.from_messages(
-            [
-                ("system", contextualize_q_system_prompt),
-                MessagesPlaceholder("chat_history"),
-                ("human", "{input}"),
-            ]
-        )
-        # 使用 LLM 和檢索器來創建具歷史感知的檢索器
-        return create_history_aware_retriever(llm, retriever, contextualize_q_prompt)
+        return PromptTemplate(input_variables=["context", "question"], template=template)
 
-    def _create_conversational_rag_chain(self, history_aware_retriever):
-        """創建具聊天記錄功能的檢索增強生成鏈。"""
-        qa_system_prompt = """
-            您是回答問題的助手。\
-            使用以下檢索到的內容來回答問題。\
-            如果您不知道答案，請直接說您不知道。\
-            {context}
-        """
-        qa_prompt = ChatPromptTemplate.from_messages(
-            [
-                ("system", qa_system_prompt),
-                MessagesPlaceholder("chat_history"),
-                ("human", "{input}"),
-            ]
-        )
-
-        # 創建一個問題回答鏈，並與檢索增強生成鏈結合
-        question_answer_chain = create_stuff_documents_chain(LLMAPI.get_llm(), qa_prompt)
-        rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
-
-        # 創建具聊天記錄功能的檢索增強生成鏈
-        return RunnableWithMessageHistory(
-            rag_chain,
-            self._get_chat_history_from_session,
-            input_messages_key="input",
-            history_messages_key="chat_history",
-            output_messages_key="answer",
-        )
+    # def _get_chat_history_from_session(self) -> str:
+    #     """從 session state 中取得聊天記錄，格式化為字符串形式."""
+    #     chat_history_data = self.chat_session_data.get('chat_history', [])
+    #     formatted_history = ""
+    #     for record in chat_history_data:
+    #         user_query = record['user_query']
+    #         ai_response = record['ai_response']
+    #         formatted_history += f"User: {user_query}\nAI: {ai_response}\n"
+    #     return formatted_history
 
     def _get_chat_history_from_session(self) -> ChatMessageHistory:
         """從 session state 中取得聊天記錄，若無則創建新的聊天記錄。"""
         # 從 session 中獲取聊天記錄，如果不存在，則初始化空的聊天記錄
-        chat_history_data = st.session_state.get('chat_history', [])
+        chat_history_data = self.chat_session_data.get('chat_history', [])
         chat_history = ChatMessageHistory()
         for record in chat_history_data:
             user_query, ai_response = record['user_query'], record['ai_response']
@@ -117,22 +102,20 @@ class RAGModel:
 
     def _save_retrieved_data_to_csv(self, query, retrieved_data, response):
         """將檢索到的數據保存到 CSV 文件中。"""
-        # 確保輸出目錄存在，若不存在則創建
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.output_dir.mkdir(parents=True, exist_ok=True)  # 確保輸出目錄存在
         output_file = self.output_dir.joinpath('retrieved_data.csv')  # 定義輸出文件路徑
 
-        # 將檢索到的文件內容組合
-        context = "\n\n".join([f"文檔 {i + 1}:\n{chunk}" for i, chunk in enumerate(retrieved_data)])
+        # 組合檢索到的文件內容
+        # context = "\n\n".join([f"文檔 {i + 1}:\n{chunk}" for i, chunk in enumerate(retrieved_data)])
+        context = "\n\n".join([f"文檔 {i + 1}:\n{chunk.page_content}" for i, chunk in enumerate(retrieved_data)])
+
         new_data = {"Question": [query], "Context": [context], "Response": [response]}  # 新數據
         new_df = pd.DataFrame(new_data)  # 將新數據轉換為 DataFrame
 
         if output_file.exists():
-            # 如果文件已存在，讀取現有數據，並合併新數據
-            existing_df = pd.read_csv(output_file)
-            combined_df = pd.concat([existing_df, new_df], ignore_index=True)
+            existing_df = pd.read_csv(output_file)  # 如果文件已存在，讀取現有數據
+            combined_df = pd.concat([existing_df, new_df], ignore_index=True)  # 合併現有數據和新數據
         else:
-            # 如果文件不存在，僅使用新數據
-            combined_df = new_df
+            combined_df = new_df  # 否則僅使用新數據
 
-        # 將合併後的數據保存到 CSV 文件
-        combined_df.to_csv(output_file, index=False, encoding='utf-8-sig')
+        combined_df.to_csv(output_file, index=False, encoding='utf-8-sig')  # 保存數據到 CSV 文件

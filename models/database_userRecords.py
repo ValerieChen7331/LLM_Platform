@@ -8,15 +8,11 @@ logging.basicConfig(level=logging.INFO)
 
 
 class UserRecordsDB:
-    def __init__(self, chat_session_data):
+    def __init__(self, username):
         """ 初始化 UserRecordsDB 類別。 """
-        username = chat_session_data.get('username')
-        conversation_id = chat_session_data.get('conversation_id')
-        self.chat_session_data = chat_session_data
-
-        self.file_paths = FilePaths(username, conversation_id)
         # 設定資料庫路徑
-        self.db_path = self.file_paths.get_user_records_dir().joinpath(f"{username}.db")
+        self.file_paths = FilePaths()
+        self.db_path = self.file_paths.get_user_records_dir(username).joinpath(f"{username}.db")
         # 創建 BaseDB 實例來處理資料庫操作
         self.base_db = BaseDB(self.db_path)
 
@@ -112,12 +108,32 @@ class UserRecordsDB:
             print(f"load_database 發生錯誤: {e}")
             return empty_df
 
-    def get_active_window_setup(self, index):
+    def delete_chat_by_index(self, delete_index):
+        """刪除指定的聊天記錄。"""
+        self.base_db.execute_query(
+            "DELETE FROM chat_history WHERE active_window_index = ?",
+            (delete_index,))
+
+    def update_chat_indexes(self, delete_index):
+        """更新聊天記錄索引。"""
+        chat_histories = self.base_db.fetch_query(
+            "SELECT id, active_window_index FROM chat_history ORDER BY active_window_index")
+
+        for id, active_window_index in chat_histories:
+            if active_window_index > delete_index:
+                new_index = active_window_index - 1
+                self.base_db.execute_query(
+                    "UPDATE chat_history SET active_window_index = ? WHERE id = ?",
+                    (new_index, id))
+
+# -----------------------------------------
+    def get_active_window_setup(self, index, chat_session_data):
         """
         從資料庫中獲取並加載當前的聊天記錄。
 
         Args:
             index (int): 聊天記錄的 active_window_index。
+            chat_session_data (dict): 聊天會話的數據，包括歷史記錄和其他相關資訊。
         """
         try:
             # 定義設置和歷史記錄的欄位名稱
@@ -145,66 +161,32 @@ class UserRecordsDB:
 
                 # 更新 chat_session_data 的設置列
                 for column in setup_columns:
-                    self.chat_session_data[column] = df_check[column].iloc[-1]
+                    chat_session_data[column] = df_check[column].iloc[-1]
 
                 # 更新 chat_history 並轉換為字典格式
                 chat_history_df = df_check[history_columns]
-                self.chat_session_data['chat_history'] = chat_history_df.to_dict(orient='records')
+                chat_session_data['chat_history'] = chat_history_df.to_dict(orient='records')
             else:
                 # 如果無結果，重置 chat_session_data 為預設值
-                self.chat_session_data = self.reset_session_state_to_defaults()
+                # chat_session_data = self.reset_session_state_to_defaults()
+                chat_session_data = {}
 
-            return self.chat_session_data
+            return chat_session_data
 
         except Exception as e:
             print(f"get_active_window_setup 發生錯誤: {e}")
 
-    def delete_chat_by_index(self, delete_index):
-        """刪除指定的聊天記錄。"""
-        self.base_db.execute_query(
-            "DELETE FROM chat_history WHERE active_window_index = ?",
-            (delete_index,))
-
-    def update_chat_indexes(self, delete_index):
-        """更新聊天記錄索引。"""
-        chat_histories = self.base_db.fetch_query(
-            "SELECT id, active_window_index FROM chat_history ORDER BY active_window_index")
-
-        for id, active_window_index in chat_histories:
-            if active_window_index > delete_index:
-                new_index = active_window_index - 1
-                self.base_db.execute_query(
-                    "UPDATE chat_history SET active_window_index = ? WHERE id = ?",
-                    (new_index, id))
-
-    def reset_session_state_to_defaults(self):
-        """重置 session state 參數至預設值。"""
-        reset_session_state = {
-            'mode': '內部LLM',
-            'llm_option': 'Qwen2-Alibaba',
-            'model': None,
-            'api_base': None,
-            'api_key': None,
-            'embedding': 'llama3',
-            'db_name': None,
-            'db_source': None,
-            'title': '',
-            'chat_history': []
-        }
-        for key, value in reset_session_state.items():
-            self.chat_session_data[key] = value
-        return self.chat_session_data
-
-    def save_to_database(self, query: str, response: str):
+    def save_to_database(self, query: str, response: str, chat_session_data):
         """
         將查詢結果保存到資料庫中。
 
         Args:
             query (str): 使用者的查詢。
             response (str): AI 回應的結果。
+            chat_session_data (dict): 聊天會話的數據，包括歷史記錄和其他相關資訊。
         """
         # 初始化資料字典，從 chat_session_data 中獲取數據
-        data = {key: self.chat_session_data.get(key, default) for key, default in {
+        data = {key: chat_session_data.get(key, default) for key, default in {
             'agent': None,
             'mode': None,
             'llm_option': None,
@@ -236,10 +218,10 @@ class UserRecordsDB:
         except Exception as e:
             logging.error(f"保存到 UserDB (chat_history) 資料庫時發生錯誤: {e}. Data: {data}")
 
-    def save_to_pdf_uploads(self):
+    def save_to_pdf_uploads(self, chat_session_data):
         """將查詢結果保存到 pdf_uploads 表格中。"""
         # 初始化資料字典，從 chat_session_data 中獲取數據
-        data = {key: self.chat_session_data.get(key, default) for key, default in {
+        data = {key: chat_session_data.get(key, default) for key, default in {
             'conversation_id': None,
             'agent': None,
             'embedding': None
@@ -259,10 +241,10 @@ class UserRecordsDB:
         except Exception as e:
             logging.error(f"保存到 UserDB (pdf_uploads) 資料庫時發生錯誤: {e}")
 
-    def save_to_file_names(self):
+    def save_to_file_names(self, chat_session_data):
         """將查詢結果保存到 file_names 表格中。"""
-        conversation_id = self.chat_session_data.get('conversation_id', None)
-        doc_names = self.chat_session_data.get('doc_names', {})
+        conversation_id = chat_session_data.get('conversation_id', None)
+        doc_names = chat_session_data.get('doc_names', {})
 
         for tmp_name, org_name in doc_names.items():
             try:

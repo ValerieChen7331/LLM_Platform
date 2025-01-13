@@ -15,6 +15,7 @@ project/
 │
 ├── controllers/                       # 控制器層，負責處理用戶輸入和調用服務
 │   ├── ui_controller.py               # UI 控制器
+│   ├── initialize.py                  # 設定初始化條件
 │
 ├── services/                          # 服務層，包含業務邏輯和與模型的交互
 │   ├── document_services.py           # 文件服務
@@ -73,6 +74,7 @@ project/
 
 ### 2. Controller（控制器層）
 - **`ui_controller.py`**: UI 控制器，負責處理來自視圖層的請求，調用服務層的業務邏輯，並將結果返回給視圖層。
+- **`initialize.py`設定初始化條件。
 
 ### 3. Services（服務層）
 - **`document_services.py`**: 文件服務，負責處理文件的加載、拆分、嵌入等操作。
