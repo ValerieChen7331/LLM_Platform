@@ -79,8 +79,8 @@ class DocumentModel:
         # print(documents)
         # 將文件拆分成塊
         text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=500,
-            chunk_overlap=100,
+            chunk_size=600,
+            chunk_overlap=300,
             length_function=len
         )
         document_chunks = text_splitter.split_documents(documents)
@@ -94,136 +94,158 @@ class DocumentModel:
         """
         # 引入所需模組
         from langchain.text_splitter import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
+        from langchain.docstore.document import Document
+        import logging
 
-        document_chunks = []  # 用於存儲符合 embeddings_on_local_vectordb 格式的內容
-        markdown_document = ""  # 暫存合併的文檔內容
+        document_chunks = []  # 用於存儲拆分後的小塊
+        combined_markdown_content = ""  # 用於合併所有文檔內容
 
-        # 處理輸入文檔
+        # 處理輸入文檔，將其合併為一個 Markdown 字串
         for doc in documents:
-            # 檢查文檔是否包含有效內容
             if hasattr(doc, "page_content") and doc.page_content:
-                markdown_document += str(doc.page_content)  # 將內容轉為字串後合併
+                combined_markdown_content += str(doc.page_content)  # 合併有效內容
             else:
-                logging.warning("Skipping a document with no content.")  # 記錄警告訊息
+                logging.warning("跳過一個無內容的文檔。")  # 記錄無內容文檔的警告
                 continue
 
-        # 使用 MarkdownHeaderTextSplitter 進行標題層級拆分
+        # 使用 MarkdownHeaderTextSplitter 進行基於標題的拆分
         headers_to_split_on = [
-            ("#", "Header 1"),  # 標題層級1
-            ("##", "Header 2"),  # 標題層級2
+            ("#", "Header 1"),
+            ("##", "Header 2"),
         ]
 
         markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
-        md_header_splits = markdown_splitter.split_text(markdown_document)  # 拆分文檔
-        # print('1. md_header_splits: ', md_header_splits)
+        md_header_splits = markdown_splitter.split_text(combined_markdown_content)  # 按標題拆分文檔
 
         # 定義字元級拆分器
-        chunk_size = 1400  # 設定塊大小
-        chunk_overlap = 600  # 設定塊重疊大小
+        chunk_size = 600  # 每個塊的大小
+        chunk_overlap = 300  # 塊的重疊大小
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
 
         # 處理每個標題分組
         for header_group in md_header_splits:
-            # 將內容拆分為更小的塊
-            _splits = text_splitter.split_text(header_group.page_content)
-            for split in _splits:
-                # 將塊包裝成符合 `embeddings_on_local_vectordb` 的格式
+            # 將每個標題組中的內容拆分為小塊
+            splits = text_splitter.split_text(header_group.page_content)
+            for split in splits:
                 document_chunks.append({
                     "page_content": split,  # 小塊內容
-                    "metadata": header_group.metadata  # 原標題的元數據
+                    "metadata": header_group.metadata  # 對應的標題元數據
                 })
 
-
-        # 將 A 格式轉換為 B 格式，但不包含 source_path
-        documents = [
-            Document(
-                metadata={'page': i},  # 僅保留頁碼資訊
-                page_content=chunk['page_content']
+        # 將拆分後的塊轉換為 LangChain Document 格式
+        transformed_documents = []
+        for i, chunk in enumerate(document_chunks):
+            transformed_documents.append(
+                Document(
+                    metadata={**chunk["metadata"], 'page': i},  # 新增頁碼到元數據
+                    page_content=chunk["page_content"] + "\n" + str(chunk["metadata"])  # 添加元數據信息
+                )
             )
-            for i, chunk in enumerate(document_chunks)
-        ]
 
-        # 記錄拆分完成的日誌訊息
-        logging.info(f"Split documents into {len(document_chunks)} chunks.")
-        return documents
+        # 記錄拆分完成的日誌
+        logging.info(f"成功將文檔拆分為 {len(transformed_documents)} 個塊。")
 
-    def split_documents_into_chunks_2(self, documents):
+        return transformed_documents
+
+    def split_documents_into_chunks_3(self, documents):
         """
-        遞歸地將文檔根據標題層級和字元內容切分成小塊，直到滿足指定大小。
+        將文件拆分為基於標題的結構小塊，並保留標題元數據。
         """
-        # 引入所需模組
-        from langchain.text_splitter import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
-        from langchain.schema import Document
+        from langchain.text_splitter import MarkdownHeaderTextSplitter
+        from langchain.docstore.document import Document
         import logging
 
-        # 定義字元級拆分器
-        chunk_size = 1000  # 設定塊大小
-        # text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=300)
+        # 初始化變數
+        document_chunks = []
+        markdown_document = ""
 
-        # 定義標題層級
+        # 合併所有文檔內容為單一 Markdown 字串
+        for doc in documents:
+            if getattr(doc, "page_content", None):  # 確認文檔有內容
+                markdown_document += str(doc.page_content)
+            else:
+                logging.warning(f"Skipping a document with no content: {doc}")
+
+        # 如果文檔內容為空，直接返回空列表
+        if not markdown_document.strip():
+            logging.warning("No valid content found in the provided documents.")
+            return []
+
+        # 配置標題層級拆分器
         headers_to_split_on = [
             ("#", "Header 1"),
             ("##", "Header 2"),
             ("###", "Header 3"),
             ("####", "Header 4"),
-            ("#####", "Header 5"),
-            ("######", "Header 6"),
         ]
+        markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
+        md_header_splits = markdown_splitter.split_text(markdown_document)
 
-        def _split_recursively(document_content, current_level):
-            """
-            遞歸地依據標題層級拆分文件，直到塊大小小於或等於 chunk_size。
-            """
-            # if current_level >= len(headers_to_split_on):
-            #     # 已達到最小標題層級，直接進行字元級拆分
-            #     return [{"page_content": chunk, "metadata": {}} for chunk in text_splitter.split_text(document_content)]
-
-            # 依據當前標題層級拆分文檔
-            header, header_name = headers_to_split_on[current_level]
-            markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=[(header, header_name)])
-            md_splits = markdown_splitter.split_text(document_content)
-            print('1. md_splits', md_splits)
-
-            chunks = []
-            for header_group in md_splits:
-                # 若拆分後的內容超出塊大小，繼續依據下一層標題層級拆分
-                if len(header_group.page_content) > chunk_size:
-                    chunks.extend(_split_recursively(header_group.page_content, current_level + 1))
-                    print('2-1. chunks', chunks)
-                else:
-                    # 若內容符合大小，直接加入結果
-                    chunks.append({
-                        "page_content": header_group.page_content,
-                        "metadata": header_group.metadata
-                    })
-                    print('2-2. chunks', chunks)
-            return chunks
-
-        # 處理輸入文檔
-        document_chunks = []
-        for doc in documents:
-            # 檢查文檔是否包含有效內容
-            if hasattr(doc, "page_content") and doc.page_content:
-                document_chunks.extend(_split_recursively(doc.page_content, 0))  # 開始從最高層級拆分
-            else:
-                logging.warning("Skipping a document with no content.")  # 記錄警告訊息
-                continue
-
-
-        print('3. document_chunks', document_chunks)
-
-        # 將結果轉換為 Document 格式
-        documents = [
-            Document(
-                metadata={'page': i, **chunk.get('metadata', {})},  # 合併頁碼與元數據
-                page_content=chunk['page_content']
+        # 將拆分結果轉換為符合格式的文檔物件
+        for i, header_group in enumerate(md_header_splits):
+            document_chunks.append(
+                Document(
+                    metadata={**header_group.metadata, 'page': i},  # 包含元數據與頁碼
+                    page_content=str(header_group.metadata) + "\n" + header_group.page_content
+                )
             )
-            for i, chunk in enumerate(document_chunks)
-        ]
+            print('1. header_group.page_content: ', type(header_group.page_content))
+            print('2-1. header_group.metadata: ', type(header_group.metadata))
+            print('2-2. header_group.metadata: ', header_group.metadata)
 
-        # 記錄拆分完成的日誌訊息
-        logging.info(f"Split documents into {len(documents)} chunks.")
-        return documents
+        # 記錄成功處理的日誌
+        logging.info(f"Successfully split documents into {len(document_chunks)} chunks.")
+        return document_chunks
+
+    def split_documents_into_chunks_4(self, documents):
+        """
+        將文件拆分為基於標題的結構小塊，並保留標題元數據。
+        """
+        from langchain.text_splitter import MarkdownHeaderTextSplitter
+        from langchain.docstore.document import Document
+        import logging
+
+        # 初始化變數
+        document_chunks = []
+        markdown_document = ""
+
+        # 合併所有文檔內容為單一 Markdown 字串
+        for doc in documents:
+            if getattr(doc, "page_content", None):  # 確認文檔有內容
+                markdown_document += str(doc.page_content)
+            else:
+                logging.warning(f"Skipping a document with no content: {doc}")
+
+        # 如果文檔內容為空，直接返回空列表
+        if not markdown_document.strip():
+            logging.warning("No valid content found in the provided documents.")
+            return []
+
+        # 配置標題層級拆分器
+        headers_to_split_on = [
+            ("#", "Header 1"),
+            ("##", "Header 2"),
+            ("###", "Header 3"),
+            ("####", "Header 4"),
+        ]
+        markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
+        md_header_splits = markdown_splitter.split_text(markdown_document)
+
+        # 將拆分結果轉換為符合格式的文檔物件
+        for i, header_group in enumerate(md_header_splits):
+            document_chunks.append(
+                Document(
+                    metadata={**header_group.metadata, 'page': i},  # 包含元數據與頁碼
+                    page_content=str(header_group.metadata) + "\n" + header_group.page_content
+                )
+            )
+            print('1. header_group.page_content: ', type(header_group.page_content))
+            print('2-1. header_group.metadata: ', type(header_group.metadata))
+            print('2-2. header_group.metadata: ', header_group.metadata)
+
+        # 記錄成功處理的日誌
+        logging.info(f"Successfully split documents into {len(document_chunks)} chunks.")
+        return document_chunks
 
     def embeddings_on_local_vectordb(self, document_chunks):
         # 將文檔塊嵌入本地向量數據庫，並返回檢索器設定

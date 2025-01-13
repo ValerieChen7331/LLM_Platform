@@ -9,6 +9,8 @@ class EmbeddingAPI:
     def get_embedding_function(mode, embedding):
         """選擇內部或外部 LLM 模型來獲取 embeddings"""
         if mode == '內部LLM':
+            # embedding = 'text-embedding-ada-002'
+            # return EmbeddingAPI._get_external_embeddings(embedding)
             return EmbeddingAPI._get_internal_embeddings(embedding)
         else:
 
@@ -20,7 +22,7 @@ class EmbeddingAPI:
         # 定義內部可用的 embedding 模型與 base_url
         embedding_models = {
             "llama3": "http://10.5.61.81:11435",
-            "bge-m3": "http://10.5.61.81:11433"
+            "bge-m3": "http://10.5.63.216:11438"
         }
         # 檢查模型名稱是否有效
         base_url = embedding_models.get(embedding)

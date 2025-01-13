@@ -5,6 +5,8 @@
 project/
 │
 ├── rag_engine.py                      # 主應用程序入口
+├── score_rag.py                       # RAG評分腳本
+├── score_rag_loop.py                  # RAG評分迴圈腳本
 │
 ├── views/                             # 視圖層，負責渲染用戶界面
 │   ├── register_page.py               # 註冊頁面視圖
@@ -25,15 +27,15 @@ project/
 │   ├── db_connection.py               # 數據庫連接配置
 │   ├── excel_to_db.py                 # Excel 導入數據庫腳本
 │   ├── llm.py                         # 語言模型腳本
-│   ├── prompt.md
+│   ├── prompt.md                      # SQL 提示文檔
 │   ├── sql_test.py                    # SQL 測試腳本
 │   ├── sql_agent.py                   # SQL 代理腳本
 │   ├── sql_agent_v2.py                # SQL 代理腳本 V2
-│   ├── vector_db_manager.py
+│   ├── vector_db_manager.py           # 向量資料庫管理腳本
 │
 ├── models/                            # 模型層，處理數據操作和邏輯
 │   ├── document_model.py              # 文件模型
-│   ├── llm_model.py                   # LLM模型
+│   ├── llm_model.py                   # LLM 模型
 │   ├── llm_rag.py                     # RAG 模型
 │   ├── database_base.py               # 基礎數據庫操作模型
 │   ├── database_devOps.py             # 開發運維數據庫模型
@@ -44,27 +46,35 @@ project/
 │   ├── embedding_api.py               # 嵌入 API
 │   ├── file_paths.py                  # 文件路徑和數據存儲處理
 │
+├── mockdata/                          # 模擬數據文件夾
+│   ├── cals_csv.py                    # CSV 計算腳本
+│   ├── evaluate_rag.py                # RAG評估腳本
+│   ├── A_出差辦法bot_原.pdf            # 示例PDF
+│   ├── QAData.csv                     # 測試用問答數據
+│
 ├── data/                              # 資料庫，包含臨時和持久化的資料存儲
-│   ├── developer/                     # 開發端數據存儲(可以看到所有使用者)
+│   ├── developer/                     # 開發端數據存儲（可以看到所有使用者）
 │   ├── user/                          # 用戶端數據存儲
-│       ├── user1                      # 以"使用者名稱"命名此資料夾
-│           ├── user1.db               # 歷史紀錄
-│           ├── conversation_ID/       # 以"對話視窗ID"命名此資料夾
+│       ├── user1/                     # 以 "使用者名稱" 命名的資料夾
+│           ├── user1.db               # 歷史記錄
+│           ├── conversation_ID/       # 以 "對話視窗ID" 命名的資料夾
 │               ├── tmp/               # 臨時文件存儲
 │               ├── vector_store/      # 向量資料庫
-│   ├── output/                        # 儲存 retrieve 搜索到的文件 chunks
+│   ├── output/                        # 儲存檢索到的文件塊（chunks）
 │
 ├── .env                               # 環境變數設定檔
-├── docker-compose.yml                 # Docker Compose配置檔
+├── docker-compose.yml                 # Docker Compose 配置檔
 ├── login_config.yaml                  # 登錄配置檔
-├── CC17.db                            # SQLite資料庫
-├── netincome.db                       # SQLite資料庫
+├── CC17.db                            # SQLite 資料庫
+├── netincome.db                       # SQLite 資料庫
 ├── requirements.txt                   # 套件清單
 ```
 ## 詳細說明
 
 ### 0. 啟動程式
 - **`rag_engine.py`**: 主應用程序文件，負責啟動應用程式。
+- **`score_rag.py`**: RAG 評分腳本。
+- **`score_rag_loop.py`**: RAG 評分迴圈腳本。
 
 ### 1. View（視圖層）
 - **`login_page.py`**: 負責登錄頁面的視圖邏輯。
@@ -100,7 +110,13 @@ project/
 - **`embedding_api.py`**: 負責嵌入生成的 API。
 - **`file_paths.py`**: 文件路徑管理和數據存儲處理。
 
-### 7. data（數據儲存）
+### 7. mockdata（模擬數據文件夾）
+- **`cals_csv.py`**: CSV 計算腳本。
+- **`evaluate_rag.py`**: RAG 評估腳本。
+- **`A_出差辦法bot_原.pdf`**: 示例 PDF。
+- **`QAData.csv`**: 測試用問答數據。
+
+### 8. Data（數據儲存）
 - **`developer/`**: 開發端數據存儲目錄，可查看所有用戶數據。
 - **`user/`**: 用戶端數據存儲目錄，每位用戶以其名稱命名資料夾，包含歷史記錄和對話數據。
   - **`user1/`**: 以 "使用者名稱" 命名的資料夾（示例用戶）。
@@ -118,3 +134,4 @@ project/
 - 提供完善的 **API 層**，支持外部服務交互。
 - 支持多種數據存儲方式，包括臨時文件、本地向量數據庫和用戶數據庫。
 - 提供 **SQL 助理功能**，用於自動生成和執行 SQL 查詢。
+

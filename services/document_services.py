@@ -23,7 +23,7 @@ class DocumentService:
             # doc_model.delete_temporary_files()
 
             # 將文檔拆分成塊
-            document_chunks = doc_model.split_documents_into_chunks_2(documents)
+            document_chunks = doc_model.split_documents_into_chunks_1(documents)
 
             # 在本地向量數據庫中嵌入文檔塊
             doc_model.embeddings_on_local_vectordb(document_chunks)

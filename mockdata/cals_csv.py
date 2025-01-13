@@ -3,8 +3,8 @@ import os
 
 
 def main():
-    file_path = "./Gemma27b"  # 設置目錄路徑
-    # Gemma27b, Gemma2, Taide, TaiwanLlama3, TaiwanLlama3f16
+    file_path = "./TaiwanLlama3f16"  # 設置目錄路徑
+    # Gemma27b, Gemma2, Taide, TaiwanLlama3, TaiwanLlama3f16, GPT4o_mini
     score_simple = []
     score_complex = []
     file_names = []  # 用來存儲處理過的檔案名稱
@@ -20,13 +20,13 @@ def main():
             try:
                 df = pd.read_csv(file_full_path)  # 讀取 CSV 文件
                 # 檢查是否存在 'SimilarityScore' 欄位
-                if 'SimilarityScore' not in df.columns:
-                    print(f"文件 {file_name} 中沒有 'SimilarityScore' 欄位，跳過該文件。")
+                if 'SimilarityBoolean' not in df.columns:
+                    print(f"文件 {file_name} 中沒有 'SimilarityBoolean' 欄位，跳過該文件。")
                     continue
 
                 # 計算相似度分數
-                simple_score = df['SimilarityScore'][0:21].sum()
-                complex_score = df['SimilarityScore'][22:40].sum()
+                simple_score = df['SimilarityBoolean'][0:21].sum()
+                complex_score = df['SimilarityBoolean'][22:40].sum()
                 score_simple.append(simple_score)
                 score_complex.append(complex_score)
                 file_names.append(file_name)  # 保存檔案名稱
@@ -51,7 +51,7 @@ def main():
     df_sum = pd.DataFrame(summary_data)
 
     # 保存到 CSV 文件
-    output_file = "summary_scores.csv"
+    output_file = "summary_scores_TaiwanLlama3f16.csv"
     df_sum.to_csv(output_file, index=False, encoding="utf-8-sig")
     print(f"總結數據已保存到 {output_file}")
 
