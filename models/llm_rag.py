@@ -15,19 +15,26 @@ from langchain.chains import create_history_aware_retriever, create_retrieval_ch
 from langchain.chains.combine_documents import create_stuff_documents_chain
 
 class RAGModel:
-    def __init__(self):
+    def __init__(self, chat_session_data):
         # 初始化文件路徑和嵌入函數
-        self.file_paths = FilePaths()
-        self.output_dir = self.file_paths.get_output_dir()
-        self.vector_store_dir = self.file_paths.get_local_vector_store_dir()
-        self.embedding_function = EmbeddingAPI.get_embedding_function()
+        self.chat_session_data = chat_session_data
+        self.mode = chat_session_data.get("mode")
+        self.llm_option = chat_session_data.get('llm_option')
+        username = chat_session_data.get("username")
+        conversation_id = chat_session_data.get("conversation_id")
+        embedding = chat_session_data.get("embedding")
+
+        file_paths = FilePaths(username, conversation_id)
+        self.output_dir = file_paths.get_output_dir()
+        self.vector_store_dir = file_paths.get_local_vector_store_dir()
+        self.embedding_function = EmbeddingAPI.get_embedding_function(self.mode, embedding)
 
 
     def query_llm_rag(self, query):
         """使用 RAG 查詢 LLM，根據給定的問題和檢索的文件內容返回答案。"""
         try:
             # 初始化語言模型，使用 "gpt-3.5-turbo" 模型，溫度設為 0，確保回答穩定
-            llm = LLMAPI.get_llm()
+            llm = LLMAPI.get_llm(self.mode, self.llm_option)
 
             # 建立向量資料庫和檢索器
             vector_db = Chroma(
@@ -40,7 +47,7 @@ class RAGModel:
             history_aware_retriever = self._create_history_aware_retriever(llm, retriever)
 
             # 創建具聊天記錄功能的檢索增強生成鏈
-            conversational_rag_chain = self._create_conversational_rag_chain(history_aware_retriever)
+            conversational_rag_chain = self._create_conversational_rag_chain(history_aware_retriever, self.mode, self.llm_option)
 
             # 查詢 RAG，並獲取回答和檢索到的文件
             result_rag = conversational_rag_chain.invoke({
@@ -58,7 +65,7 @@ class RAGModel:
 
         except Exception as e:
             # 當發生錯誤時顯示錯誤訊息
-            return st.error(f"查詢 query_llm_rag 時發生錯誤: {e}"), []
+            return print(f"查詢 query_llm_rag 時發生錯誤: {e}"), []
 
     def _create_history_aware_retriever(self, llm, retriever):
         """創建具備聊天記錄感知能力的檢索器。"""
@@ -77,7 +84,7 @@ class RAGModel:
         # 使用 LLM 和檢索器來創建具歷史感知的檢索器
         return create_history_aware_retriever(llm, retriever, contextualize_q_prompt)
 
-    def _create_conversational_rag_chain(self, history_aware_retriever):
+    def _create_conversational_rag_chain(self, history_aware_retriever, mode, llm_option):
         """創建具聊天記錄功能的檢索增強生成鏈。"""
         qa_system_prompt = """
             您是回答問題的助手。\
@@ -94,7 +101,7 @@ class RAGModel:
         )
 
         # 創建一個問題回答鏈，並與檢索增強生成鏈結合
-        question_answer_chain = create_stuff_documents_chain(LLMAPI.get_llm(), qa_prompt)
+        question_answer_chain = create_stuff_documents_chain(LLMAPI.get_llm(self.mode, self.llm_option), qa_prompt)
         rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
 
         # 創建具聊天記錄功能的檢索增強生成鏈

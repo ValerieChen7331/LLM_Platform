@@ -28,7 +28,6 @@ class RegisterPage:
         """顯示註冊頁面"""
         st.title("註冊新用戶")
         
-        
         try:
             email_of_registered_user, username_of_registered_user, name_of_registered_user = self.authenticator.register_user(pre_authorization=True)
             if email_of_registered_user:

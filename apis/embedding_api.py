@@ -1,50 +1,38 @@
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain_openai import AzureOpenAIEmbeddings
-import streamlit as st
 from dotenv import load_dotenv
 import os
 
+
 class EmbeddingAPI:
-
     @staticmethod
-    def get_embedding_function():
+    def get_embedding_function(mode, embedding):
         """選擇內部或外部 LLM 模型來獲取 embeddings"""
-        mode = st.session_state.get('mode', '內部LLM')
-
         if mode == '內部LLM':
-            return EmbeddingAPI._get_internal_embeddings()
+            return EmbeddingAPI._get_internal_embeddings(embedding)
         else:
-            return EmbeddingAPI._get_external_embeddings()
+            return EmbeddingAPI._get_external_embeddings(embedding)
 
     @staticmethod
-    def _get_internal_embeddings():
+    def _get_internal_embeddings(embedding):
         """獲取內部 LLM 模型的 embeddings"""
         # 定義內部可用的 embedding 模型與 base_url
         embedding_models = {
             "llama3": "http://10.5.61.81:11435",
             "bge-m3": "http://10.5.61.81:11433"
         }
-
-        # 獲取 session 中的模型設定，若無則設為 'llama3'
-        model = st.session_state.get('embedding', 'llama3')
-
         # 檢查模型名稱是否有效
-        base_url = embedding_models.get(model)
+        base_url = embedding_models.get(embedding)
         if not base_url:
-            raise ValueError(f"無效的內部模型名稱：{model}")
+            raise ValueError(f"無效的內部 embeddings 模型名稱：{embedding}")
 
         # 建立並返回 OllamaEmbeddings 實例
-        embeddings = OllamaEmbeddings(base_url=base_url, model=model)
-
-        # 更新 session 中的模型名稱
-        st.session_state['embedding'] = model
+        embeddings = OllamaEmbeddings(base_url=base_url, model=embedding)
         return embeddings
 
     @staticmethod
-    def _get_external_embeddings():
+    def _get_external_embeddings(model):
         """獲取外部 Azure 模型的 embeddings"""
-        # 獲取 session 中的外部模型設定，若無則設為 'text-embedding-ada-002'
-        model = st.session_state.get('embedding', 'text-embedding-3-large')
         # 加载 .env 文件中的环境变量
         load_dotenv()
 
@@ -61,7 +49,4 @@ class EmbeddingAPI:
             openai_api_version=embedding_api_version,
             # dimensions: Optional[int] = None  # 可選擇指定新 text-embedding-3 模型的維度
         )
-
-        # 更新 session 中的模型名稱
-        st.session_state['embedding'] = model
         return embeddings

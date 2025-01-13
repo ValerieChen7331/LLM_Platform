@@ -4,16 +4,17 @@ from models.database_userRecords import UserRecordsDB
 from models.database_devOps import DevOpsDB
 
 class DocumentService:
-    def __init__(self):
+    def __init__(self, chat_session_data):
         # 初始化 DocumentModel
-        self.doc_model = DocumentModel()
-        self.userRecords_db = UserRecordsDB()
-        self.devOps_db = DevOpsDB()
+        self.doc_model = DocumentModel(chat_session_data)
+        self.userRecords_db = UserRecordsDB(chat_session_data)
+        self.devOps_db = DevOpsDB(chat_session_data)
 
-    def process_uploaded_documents(self):
+    def process_uploaded_documents(self, chat_session_data, source_docs):
         try:
             # 建立臨時文件
-            self.doc_model.create_temporary_files()
+            doc_names = self.doc_model.create_temporary_files(source_docs)
+            chat_session_data['doc_names'] = doc_names
 
             # 加載文檔
             documents = self.doc_model.load_documents()
@@ -33,6 +34,7 @@ class DocumentService:
             self.userRecords_db.save_to_pdf_uploads()
             self.devOps_db.save_to_pdf_uploads()
 
+            return chat_session_data
 
         except Exception as e:
             # 處理文檔時發生錯誤，顯示錯誤訊息

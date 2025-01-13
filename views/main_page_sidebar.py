@@ -1,13 +1,15 @@
 import streamlit as st
+from controllers.ui_controller import UIController
 from models.database_userRecords import UserRecordsDB
-from models.document_model import DocumentModel
+
 
 class Sidebar:
-    def __init__(self, controller):
+    def __init__(self, chat_session_data):
         """初始化側邊欄物件"""
-        self.controller = controller
-        self.userRecords_db = UserRecordsDB()
-        self.document_model = DocumentModel()
+        self.chat_session_data = chat_session_data
+
+        self.controller = UIController()
+        self.userRecords_db = UserRecordsDB(self.chat_session_data)
 
         # 助理類型選項
         self.agent_options = ['一般助理', '個人KM', '資料庫查找助理', '資料庫查找助理2.0', 'SQL生成助理']
@@ -72,15 +74,15 @@ class Sidebar:
     def _new_chat_button(self):
         """顯示新聊天按鈕"""
         if st.button("New Chat"):
-            st.session_state['agent'] = '一般助理'
+            self.chat_session_data['agent'] = '一般助理'
             # 點擊按鈕後，啟動新的聊天
-            self.controller.new_chat()
+            self.controller.new_chat(self.chat_session_data)
 
     def _agent_selection(self):
         """顯示助理類型選擇與資料庫選擇"""
         st.title("Agent")
 
-        current_agent = st.session_state.get('agent')  # 取得當前的助理類型
+        current_agent = self.chat_session_data.get('agent')  # 取得當前的助理類型
         selected_agent_index = self.agent_options.index(current_agent)  # 取得當前助理類型在選項中的索引位置
 
         selected_agent = st.radio(
@@ -89,15 +91,13 @@ class Sidebar:
             index=selected_agent_index  # 預設選擇當前助理類型
         )
         print('1. select', selected_agent)
-        print('2. get', st.session_state.get('agent'))
+        print('2. get', self.chat_session_data.get('agent'))
 
         # 如果選擇的助理類型改變
-        if selected_agent != st.session_state.get('agent'):
+        if selected_agent != self.chat_session_data.get('agent'):
             # 開啟新的聊天窗口
-            self.controller.new_chat()
-            st.session_state['agent'] = selected_agent
-            print('---selected_agent != st.session_state.get(agent)---')
-            #st.rerun()  # 刷新頁面
+            self.controller.new_chat(self.chat_session_data)
+            self.chat_session_data['agent'] = selected_agent
 
         # 顯示資料庫選項
         if selected_agent not in ['一般助理', '個人KM']:
@@ -109,7 +109,7 @@ class Sidebar:
         self._create_selectbox('選擇資料來源:', 'db_source', self.db_source_options)
 
         # 根據選擇的資料來源顯示對應的資料庫選項
-        db_source = st.session_state['db_source']
+        db_source = self.chat_session_data.get['db_source']
         db_name = self.db_name.get(db_source, ['na'])
 
         # 建立資料庫選擇框
@@ -119,7 +119,7 @@ class Sidebar:
         """顯示 LLM 模式選項"""
         st.title("LLM")
 
-        current_mode = st.session_state.get('mode')  # 取得當前的助理類型
+        current_mode = self.chat_session_data.get('mode')  # 取得當前的助理類型
         selected_mode_index = self.mode_options.index(current_mode)  # 取得當前助理類型在選項中的索引位置
 
         selected_mode = st.radio(
@@ -128,16 +128,16 @@ class Sidebar:
             index=selected_mode_index  # 預設選擇當前助理類型
         )
 
-        st.session_state['mode'] = selected_mode
+        self.chat_session_data['mode'] = selected_mode
 
-        # 如果選擇的助理類型改變
-        #if selected_mode != st.session_state.get('mode'):
-        #    st.session_state['mode'] = selected_mode
+        # 如果選擇的 LLM 改變
+        #if selected_mode != self.chat_session_data.get('mode'):
+        #    self.chat_session_data['mode'] = selected_mode
             # 開啟新的聊天窗口
         #    self.controller.new_chat()
 
         # 根據選擇的 LLM 類型顯示對應的 LLM 選項
-        if st.session_state.get('mode') == '內部LLM':
+        if self.chat_session_data.get('mode') == '內部LLM':
             llm_options = self.llm_options_internal
         else:
             llm_options = self.llm_options_external
@@ -148,10 +148,10 @@ class Sidebar:
     def _embedding_selection(self):
         """顯示 Embedding 模式選項"""
         # 僅當助理類型為 '個人KM' 時顯示嵌入模型選項
-        if st.session_state.get('agent') == '個人KM':
+        if self.chat_session_data.get('agent') == '個人KM':
             st.title("Embedding")
             # 根據選擇的 LLM 顯示對應的嵌入模型選項
-            if st.session_state.get('mode') == '內部LLM':
+            if self.chat_session_data.get('mode') == '內部LLM':
                 embedding_options = self.embedding_options_internal
             else:
                 embedding_options = self.embedding_options_external
@@ -163,7 +163,7 @@ class Sidebar:
         """顯示側邊欄中的聊天記錄"""
         st.title("聊天記錄")
         # 取得當前聊天窗口的總數量
-        total_windows = st.session_state.get('num_chat_windows')
+        total_windows = self.chat_session_data.get('num_chat_windows')
 
         for index in range(total_windows):
             chat_title = self.controller.get_title(index)  # 取得聊天窗口的標題
@@ -171,38 +171,38 @@ class Sidebar:
 
             # 點擊標題來選擇聊天窗口
             if chat_window.button(chat_title, key=f'chat_window_select_{index}'):
-                st.session_state['active_window_index'] = index
+                self.chat_session_data['active_window_index'] = index
                 self._update_window_setup()
 
             # 點擊刪除按鈕來刪除聊天
             if delete_button.button("X", key=f'chat_delete_{index}'):
                 # 刪除聊天並更新索引
-                self.controller.delete_chat_history_and_update_indexes(index)
+                self.controller.delete_chat_history_and_update_indexes(index, self.chat_session_data)
                 self._update_active_window_index(index, total_windows)
                 self._update_window_setup()
 
     def _update_active_window_index(self, deleted_index, total_windows):
         """更新目前活動窗口的索引"""
-        active_window_index = st.session_state.get('active_window_index')
+        active_window_index = self.chat_session_data.get('active_window_index')
         # 如果刪除的窗口在當前活動窗口之前，則將索引 -1
         if active_window_index > deleted_index:
-            st.session_state['active_window_index'] -= 1
+            self.chat_session_data['active_window_index'] -= 1
         # 如果刪除的窗口就是當前活動窗口，則將索引設為最後一個窗口
         elif active_window_index == deleted_index:
-            st.session_state['active_window_index'] = total_windows - 1
+            self.chat_session_data['active_window_index'] = total_windows - 1
 
     def _update_window_setup(self):
         """更新窗口設定並重新執行應用程式"""
-        index = st.session_state.get('active_window_index')
+        index = self.chat_session_data.get('active_window_index')
         # 取得當前活動窗口的設定
-        self.userRecords_db.get_active_window_setup(index)
+        self.chat_session_data = self.userRecords_db.get_active_window_setup(index)
         st.rerun()  # 重新執行應用程式
 
     def _create_selectbox(self, label, key, options):
         """建立選擇框並更新 session state"""
         try:
-            selected_index = options.index(st.session_state.get(key, options[0]))
+            selected_index = options.index(self.chat_session_data.get(key, options[0]))
         except ValueError:
             selected_index = 0
         # 根據選擇框選擇的值更新 session state
-        st.session_state[key] = st.selectbox(label, options, index=selected_index)
+        self.chat_session_data[key] = st.selectbox(label, options, index=selected_index)

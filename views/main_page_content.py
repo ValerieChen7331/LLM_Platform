@@ -1,10 +1,14 @@
 import streamlit as st
+from services.document_services import DocumentService
+from controllers.ui_controller import UIController
+from models.database_userRecords import UserRecordsDB
 
 class MainContent:
-    def __init__(self, controller, userRecords_db):
+    def __init__(self, chat_session_data):
         """初始化主內容物件"""
-        self.controller = controller
-        self.userRecords_db = userRecords_db
+        self.chat_session_data = chat_session_data
+        self.controller = UIController()
+        self.doc_service = DocumentService(chat_session_data)
 
     def display(self):
         """顯示主內容"""
@@ -21,17 +25,26 @@ class MainContent:
     def _display_input_fields(self):
         """顯示文件上傳欄位，僅當選擇 '個人KM' 時顯示"""
         # 只在 '個人KM' 時執行
-        if st.session_state.get('agent') == '個人KM':
+        if self.chat_session_data.get('agent') == '個人KM':
             # 顯示文件上傳欄位，允許上傳多個 PDF 文件
-            st.session_state['source_docs'] = st.file_uploader(label="上傳文檔", type="pdf", accept_multiple_files=True)
+            uploaded_files = st.file_uploader(label="上傳文檔", type="pdf", accept_multiple_files=True)
+            # 準備文件列表，包含文件名和內容
+            source_docs = [{'name': file.name, 'content': file.read()} for file in
+                           uploaded_files] if uploaded_files else []
             # 顯示提交按鈕，點擊時觸發 process_uploaded_documents 方法
-            st.button("提交文件", on_click=self.controller.process_uploaded_documents, key="submit", help="提交文件")
+            if st.button("提交文件", key="submit", help="提交文件"):
+                try:
+                    self.chat_session_data = self.doc_service.process_uploaded_documents(self.chat_session_data, source_docs)
+                except Exception as e:
+                    st.error(f"處理文檔時發生錯誤：{e}")
+
+            st.write(f'此功能仍在測試階段...')
 
     def _display_sql_example(self):
         """根據資料庫來源顯示 prompt"""
-        db_source = st.session_state.get('db_source')
-        db_name = st.session_state.get('db_name')
-        selected_agent = st.session_state.get('agent')
+        db_source = self.chat_session_data.get('db_source')
+        db_name = self.chat_session_data.get('db_name')
+        selected_agent = self.chat_session_data.get('agent')
 
         if selected_agent not in ['一般助理', '個人KM']:
             # 顯示 Oracle 資料庫的輸入範例
@@ -52,9 +65,7 @@ class MainContent:
 
     def _display_active_chat_history(self):
         """顯示聊天記錄"""
-        # 從user資料庫中取得聊天記錄
-        # self.userRecords_db.get_chat_history()
-        chat_records = st.session_state.get('chat_history', [])
+        chat_records = self.chat_session_data.get('chat_history', [])
         print('chat_records')
         print(chat_records)
         if chat_records:

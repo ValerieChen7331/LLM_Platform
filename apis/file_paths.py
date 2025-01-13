@@ -1,16 +1,12 @@
 from pathlib import Path
-import streamlit as st
 
 class FilePaths:
-    def __init__(self, base_dir=None):
+    def __init__(self, username, conversation_id, base_dir=None):
         # 設定 TMP_DIR、LOCAL_VECTOR_STORE_DIR 和 OUTPUT_DIR 的路徑
         if base_dir is None:
             base_dir = Path(__file__).resolve().parent.parent.joinpath('data')
         else:
             base_dir = Path(base_dir)  # 確保 base_dir 是 Path 對象
-
-        username = st.session_state.get('username')
-        conversation_id = st.session_state.get('conversation_id')
 
         self.TMP_DIR = base_dir.joinpath(f"user/{username}/{conversation_id}/tmp")
         self.LOCAL_VECTOR_STORE_DIR = base_dir.joinpath(f"user/{username}/{conversation_id}/vector_store")
