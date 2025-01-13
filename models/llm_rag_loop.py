@@ -15,7 +15,6 @@ from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 
-import time
 import os
 os.environ["CHROMA_TELEMETRY"] = "False"
 
@@ -40,34 +39,33 @@ class RAGModel:
             llm = LLMAPI.get_llm(self.mode, self.llm_option)
             # 初始化 embedding 模型
             embedding = self.chat_session_data.get("embedding")
-            embedding_function = EmbeddingAPI.get_embedding_function('內部LLM', embedding)
+            embedding_function = EmbeddingAPI.get_embedding_function(self.mode, embedding)
 
             # 建立向量資料庫和檢索器
             vector_db = Chroma(
                 embedding_function=embedding_function,
                 persist_directory=self.vector_store_dir.as_posix()
             )
-            retriever = vector_db.as_retriever(search_type="mmr", search_kwargs={"k": 5, "fetch_k": 20})
+            retriever = vector_db.as_retriever(search_type="mmr", search_kwargs={"k": 3, "fetch_k": 5})
 
             # 創建具備聊天記錄感知能力的檢索器
             history_aware_retriever = self._create_history_aware_retriever(llm, retriever)
 
             # 創建具聊天記錄功能的檢索增強生成鏈
             conversational_rag_chain = self._create_conversational_rag_chain(llm, history_aware_retriever)
-            print("111111")
 
             # 查詢 RAG，並獲取回答和檢索到的文件
             result_rag = conversational_rag_chain.invoke({
                 'input': query,
-                'chat_history': ChatMessageHistory()      # self._get_chat_history_from_session(),
+                'chat_history': self._get_chat_history_from_session(),
             })
 
-            print('1. result_rag: ', result_rag)
+            # print('1. result_rag: ', result_rag)
 
             response = result_rag.get('answer', '')  # 取得回答
             retrieved_documents = result_rag.get('context', [])  # 取得檢索到的文件
 
-            print('2. retrieved_documents: ', retrieved_documents)
+            # print('2. retrieved_documents: ', retrieved_documents)
             # print('3. response: ', response)
 
 
@@ -134,7 +132,7 @@ class RAGModel:
                     - 每次回答後，請提醒用戶：本系統為人工智能，僅提供輔助性質的資訊，最終決策仍以會計審核員的意見為主。
                     -----
                     使用以下檢索到的內容來回答問題。\
-                    注意! 如果檢索到的內容無法回答，請如實回答，請直接說"文件中未提及"。請勿自編造!\
+                    注意! 如果檢索到的內容無法回答，請直接說您不知道。請勿自編造!\
                     檢索到的內容: {context}
                 """
 
@@ -168,7 +166,6 @@ class RAGModel:
             user_query, ai_response = record['user_query'], record['ai_response']
             chat_history.add_user_message(user_query)
             chat_history.add_ai_message(ai_response)
-        print('3. chat_history: ', chat_history)
         return chat_history
 
     def _save_retrieved_data_to_csv(self, query, retrieved_data, response):

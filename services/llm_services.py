@@ -27,8 +27,8 @@ class LLMService:
 
         # 根據選擇的助理類型來執行對應的查詢
         if selected_agent == '資料庫查找助理':
-            response = ''
             # response = agent(query, db_name, db_source)
+            response = ''
             print('資料庫查找助理...')
 
         elif selected_agent == '資料庫查找助理2.0':
@@ -52,7 +52,10 @@ class LLMService:
             response = llm_model.query_llm_direct(query)
 
         # 更新 chat_session_data 中的聊天記錄
-        self.chat_session_data['chat_history'].append({"user_query": query, "ai_response": response})
+        # test
+        # self.chat_session_data['chat_history'].append({"user_query": query, "ai_response": response})
+        self.chat_session_data['chat_history'] = []
+        # test
         print('chat_history', self.chat_session_data['chat_history'])
         self.chat_session_data['empty_window_exists'] = False
 

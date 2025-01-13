@@ -14,8 +14,8 @@ class MainContent:
         if self.chat_session_data.get('agent') == '個人KM':
             self.display_input_fields()
         # 顯示資料庫範例
-        if self.chat_session_data.get('agent') == '個人KM':
-            self.display_sql_example()
+        # if self.chat_session_data.get('agent') not in ['一般助理', '個人KM']:
+        #     self.display_sql_example()
         # 顯示聊天記錄
         self.display_active_chat_history()
 

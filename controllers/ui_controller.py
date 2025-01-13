@@ -41,11 +41,11 @@ class UIController:
         """重置 session state 參數至預設值。"""
         reset_session_state = {
             'mode': '內部LLM',
-            'llm_option': 'Qwen2-Alibaba',
+            'llm_option': 'Gemma2',
             'model': None,
             'api_base': None,
             'api_key': None,
-            'embedding': 'llama3',
+            'embedding': 'bge-m3',
             'db_name': None,
             'db_source': None,
             'title': '',

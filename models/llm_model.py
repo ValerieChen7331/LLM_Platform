@@ -6,7 +6,8 @@ from apis.llm_api import LLMAPI
 # from langchain.prompts import ChatPromptTemplate
 from langchain.chains import ConversationChain
 from langchain.memory import ConversationBufferMemory
-from langchain.memory import ChatMessageHistory
+# from langchain.memory import ChatMessageHistory
+from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.prompts import PromptTemplate
 

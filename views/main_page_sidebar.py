@@ -21,11 +21,11 @@ class Sidebar:
         # 內部或外部 LLM
         self.mode_options = ['內部LLM', '外部LLM']
         # 內部 LLM 選項
-        self.llm_options_internal = ["Qwen2-Alibaba", "Taiwan-llama3-8b", "Taiwan-llama2-13b"]
+        self.llm_options_internal = ["Gemma2", "Gemma2:27b", "Taiwan-llama3-f16", "Taide-llama3-8b-f16"]    # "Qwen2-Alibaba", "Taiwan-llama3-8b"
         # 外部 LLM 選項
         self.llm_options_external = ["gpt-4o", "gpt-4o-mini", "gpt-4", "gpt-35-turbo"]
         # 內部嵌入模型選項
-        self.embedding_options_internal = ["llama3", "bge-m3"]
+        self.embedding_options_internal = ["bge-m3", "llama3"]
         # 外部嵌入模型選項
         self.embedding_options_external = ["text-embedding-3-large", "text-embedding-3-small", "text-embedding-ada-002"]
 
@@ -86,7 +86,7 @@ class Sidebar:
 
     def agent_selection(self):
         """顯示助理類型選擇與資料庫選擇"""
-        st.title("Agent")
+        st.title("Assistants")
         current_agent = self.chat_session_data.get('agent', self.agent_options[0])  # 取得當前助理類型，若無則使用預設值
         selected_agent = st.radio("請選擇助理種類型:", self.agent_options, index=self.agent_options.index(current_agent))
 
@@ -112,6 +112,7 @@ class Sidebar:
         self.chat_session_data['mode'] = selected_mode  # 更新選擇的 LLM 模式
 
         llm_options = self.llm_options_internal if selected_mode == '內部LLM' else self.llm_options_external
+        self.chat_session_data['llm_option'] = llm_options[0]  # 更新選擇的 llm_option 模式
         self._create_selectbox('選擇 LLM：', 'llm_option', llm_options)  # 顯示對應的 LLM 選項
 
     def embedding_selection(self):
@@ -121,6 +122,7 @@ class Sidebar:
             embedding_options = self.embedding_options_internal
         else:
             embedding_options = self.embedding_options_external
+        self.chat_session_data['embedding'] = embedding_options[0]  # 更新選擇的 embedding 模式
         self._create_selectbox('選擇嵌入模型：', 'embedding', embedding_options)  # 顯示對應的嵌入模型選項
 
     def chat_history_buttons(self):
