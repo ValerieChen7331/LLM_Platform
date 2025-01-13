@@ -27,8 +27,8 @@ class LLMService:
 
         # 根據選擇的助理類型來執行對應的查詢
         if selected_agent == '資料庫查找助理':
-            # response = agent(query, db_name, db_source)
             response = ''
+            # response = agent(query, db_name, db_source)
             print('資料庫查找助理...')
 
         elif selected_agent == '資料庫查找助理2.0':

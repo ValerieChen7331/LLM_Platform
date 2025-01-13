@@ -20,7 +20,7 @@ class EmbeddingAPI:
         # 定義內部可用的 embedding 模型與 base_url
         embedding_models = {
             "llama3": "http://10.5.61.81:11435",
-            #"bge-m3": "http://10.5.61.81:11433"
+            "bge-m3": "http://10.5.61.81:11433"
         }
         # 檢查模型名稱是否有效
         base_url = embedding_models.get(embedding)

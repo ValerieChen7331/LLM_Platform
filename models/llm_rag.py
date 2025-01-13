@@ -4,9 +4,7 @@ from apis.llm_api import LLMAPI
 from apis.embedding_api import EmbeddingAPI
 from apis.file_paths import FilePaths
 
-# from langchain_community.vectorstores import Chroma
-from langchain_chroma import Chroma
-
+from langchain_community.vectorstores import Chroma
 from langchain_core.runnables import RunnableWithMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 # from langchain.memory import ChatMessageHistory
@@ -14,9 +12,6 @@ from langchain_community.chat_message_histories import ChatMessageHistory
 
 from langchain.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
-
-import os
-os.environ["CHROMA_TELEMETRY"] = "False"
 
 class RAGModel:
     def __init__(self, chat_session_data):
@@ -46,13 +41,13 @@ class RAGModel:
                 embedding_function=embedding_function,
                 persist_directory=self.vector_store_dir.as_posix()
             )
-            retriever = vector_db.as_retriever(search_type="mmr", search_kwargs={"k": 5, "fetch_k": 8})
+            retriever = vector_db.as_retriever(search_kwargs={'k': 3})
 
             # 創建具備聊天記錄感知能力的檢索器
             history_aware_retriever = self._create_history_aware_retriever(llm, retriever)
 
             # 創建具聊天記錄功能的檢索增強生成鏈
-            conversational_rag_chain = self._create_conversational_rag_chain(llm, history_aware_retriever)
+            conversational_rag_chain = self._create_conversational_rag_chain(history_aware_retriever, self.mode, self.llm_option)
 
             # 查詢 RAG，並獲取回答和檢索到的文件
             result_rag = conversational_rag_chain.invoke({
@@ -60,14 +55,8 @@ class RAGModel:
                 'chat_history': self._get_chat_history_from_session(),
             })
 
-            # print('1. result_rag: ', result_rag)
-
             response = result_rag.get('answer', '')  # 取得回答
-            retrieved_documents = result_rag.get('context', [])  # 取得檢索到的文件
-
-            # print('2. retrieved_documents: ', retrieved_documents)
-            print('3. response: ', response)
-
+            retrieved_documents = result_rag.get('source_documents', [])  # 取得檢索到的文件
 
             # 保存檢索到的數據到 CSV 文件
             self._save_retrieved_data_to_csv(query, retrieved_documents, response)
@@ -93,16 +82,14 @@ class RAGModel:
             ]
         )
         # 使用 LLM 和檢索器來創建具歷史感知的檢索器
-        history_aware_retriever = create_history_aware_retriever(llm, retriever, contextualize_q_prompt)
-        print('5. history_aware_retriever: ', history_aware_retriever)
-        return history_aware_retriever
+        return create_history_aware_retriever(llm, retriever, contextualize_q_prompt)
 
-    def _create_conversational_rag_chain(self, llm, history_aware_retriever):
+    def _create_conversational_rag_chain(self, history_aware_retriever, mode, llm_option):
         """創建具聊天記錄功能的檢索增強生成鏈。"""
         qa_system_prompt = """
             您是回答問題的助手。\
             使用以下檢索到的內容來回答問題。\
-            注意! 如果檢索到的內容無法回答，請直接說您不知道。請勿自編造!\
+            如果您不知道答案，請直接說您不知道。\
             {context}
         """
         qa_prompt = ChatPromptTemplate.from_messages(
@@ -114,7 +101,7 @@ class RAGModel:
         )
 
         # 創建一個問題回答鏈，並與檢索增強生成鏈結合
-        question_answer_chain = create_stuff_documents_chain(llm, qa_prompt)
+        question_answer_chain = create_stuff_documents_chain(LLMAPI.get_llm(self.mode, self.llm_option), qa_prompt)
         rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
 
         # 創建具聊天記錄功能的檢索增強生成鏈

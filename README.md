@@ -25,11 +25,11 @@ project/
 │   ├── db_connection.py               # 數據庫連接配置
 │   ├── excel_to_db.py                 # Excel 導入數據庫腳本
 │   ├── llm.py                         # 語言模型腳本
-│   ├──prompt.md
+│   ├── prompt.md
 │   ├── sql_test.py                    # SQL 測試腳本
 │   ├── sql_agent.py                   # SQL 代理腳本
 │   ├── sql_agent_v2.py                # SQL 代理腳本 V2
-│   ├──vector_db_manager.py
+│   ├── vector_db_manager.py
 │
 ├── models/                            # 模型層，處理數據操作和邏輯
 │   ├── document_model.py              # 文件模型
@@ -74,7 +74,7 @@ project/
 
 ### 2. Controller（控制器層）
 - **`ui_controller.py`**: UI 控制器，負責處理來自視圖層的請求，調用服務層的業務邏輯，並將結果返回給視圖層。
-- **`initialize.py`設定初始化條件。
+- **`initialize.py`**: 設定初始化條件。
 
 ### 3. Services（服務層）
 - **`document_services.py`**: 文件服務，負責處理文件的加載、拆分、嵌入等操作。

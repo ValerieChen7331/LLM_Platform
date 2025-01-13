@@ -21,11 +21,11 @@ class Sidebar:
         # 內部或外部 LLM
         self.mode_options = ['內部LLM', '外部LLM']
         # 內部 LLM 選項
-        self.llm_options_internal = ["Qwen2-Alibaba", "Taiwan-llama3-8b", "Gemma2", "Gemma2:27b", "Taiwan-llama3-f16", "Taide-llama3-8b-f16"]
+        self.llm_options_internal = ["Qwen2-Alibaba", "Taiwan-llama3-8b", "Taiwan-llama2-13b"]
         # 外部 LLM 選項
         self.llm_options_external = ["gpt-4o", "gpt-4o-mini", "gpt-4", "gpt-35-turbo"]
         # 內部嵌入模型選項
-        self.embedding_options_internal = ["llama3"]
+        self.embedding_options_internal = ["llama3", "bge-m3"]
         # 外部嵌入模型選項
         self.embedding_options_external = ["text-embedding-3-large", "text-embedding-3-small", "text-embedding-ada-002"]
 

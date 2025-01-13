@@ -2,22 +2,16 @@ import logging
 import tempfile
 from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-# from langchain_community.vectorstores import Chroma
-from langchain_chroma import Chroma
+from langchain_community.vectorstores import Chroma
 from apis.file_paths import FilePaths
 from apis.embedding_api import EmbeddingAPI
 from pathlib import Path
-import os
-
 # from langchain_chroma import Chroma
 # from langchain.schema.document import Document
 # from unstructured.partition.pdf import partition_pdf
 # from apis.llm_api import LLMAPI
 # from langchain.prompts import PromptTemplate
 # from langchain.chains import LLMChain
-
-
-os.environ["CHROMA_TELEMETRY"] = "False"
 
 # 設定日誌記錄的級別為 INFO
 logging.basicConfig(level=logging.INFO)
@@ -95,7 +89,7 @@ class DocumentModel:
             raise ValueError("No document chunks to embed. Please check the text splitting process.")
 
         Chroma.from_documents(
-            documents=document_chunks,
+            document_chunks,
             embedding=embedding_function,
             persist_directory=self.vector_store_dir.as_posix()
         )
