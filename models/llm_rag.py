@@ -39,7 +39,7 @@ class RAGModel:
             )
 
             # 使用向量資料庫進行相似度檢索
-            relevant_docs = vectorstore.similarity_search(query)
+            relevant_docs = vectorstore.similarity_search(query, k=5)
 
             context = ""
             retrieved_documents = []  # 儲存檢索到的文件內容

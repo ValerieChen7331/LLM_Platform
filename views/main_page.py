@@ -1,6 +1,6 @@
 import streamlit as st
 from controllers.ui_controller import UIController
-from models.database_userRecords import UserRecordsDB
+
 from views.main_page_sidebar import Sidebar
 from views.main_page_content import MainContent
 
@@ -8,9 +8,8 @@ class MainPage:
     def __init__(self):
         """初始化主頁面物件"""
         self.controller = UIController()
-        self.userRecords_db = UserRecordsDB()
-        self.sidebar = Sidebar(self.controller)
-        self.main_content = MainContent(self.controller, self.userRecords_db)
+        self.sidebar = Sidebar()
+        self.main_content = MainContent()
         self.controller.initialize_session_state()  # 初始化 session state
 
     def show(self):

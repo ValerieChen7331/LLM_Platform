@@ -66,3 +66,16 @@ class LLMAPI:
             deployment_name=deployment_name
         )
         return llm
+
+    @staticmethod
+    def _get_gemini(deployment_name):
+        """獲取外部 Gemini 模型"""
+        from langchain_google_genai import ChatGoogleGenerativeAI
+
+        # 使用 os.getenv() 來取得環境變數中的 API 金鑰
+        api_key = os.getenv("GOOGLE_API_KEY")
+
+        # 初始化 Google Gemini 模型
+        llm = ChatGoogleGenerativeAI(model="gemini-pro", api_key=api_key)
+
+        return llm

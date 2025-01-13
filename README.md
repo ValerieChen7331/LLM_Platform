@@ -7,6 +7,7 @@ project/
 ├── rag_engine.py                      # 主應用程序入口
 │
 ├── views/                             # 視圖層，負責渲染用戶界面
+│   ├── register_page.py               # 註冊頁面視圖
 │   ├── login_page.py                  # 登錄頁面視圖
 │   ├── main_page.py                   # 主頁面顯示邏輯
 │   ├── main_page_sidebar.py           # 主頁面側邊欄視圖
@@ -20,16 +21,19 @@ project/
 │   ├── llm_services.py                # LLM 服務
 │
 ├── sql/                               # SQL 文件夾，存儲數據庫相關文件
-│   ├── database_connection.py         # 數據庫連接配置
-│   ├── excel_to_database.py           # Excel 導入數據庫腳本
-│   ├── language_model.py              # 語言模型腳本
+│   ├── db_connection.py               # 數據庫連接配置
+│   ├── excel_to_db.py                 # Excel 導入數據庫腳本
+│   ├── llm.py                         # 語言模型腳本
+│   ├──prompt.md
 │   ├── sql_test.py                    # SQL 測試腳本
 │   ├── sql_agent.py                   # SQL 代理腳本
 │   ├── sql_agent_v2.py                # SQL 代理腳本 V2
+│   ├──vector_db_manager.py
 │
 ├── models/                            # 模型層，處理數據操作和邏輯
 │   ├── document_model.py              # 文件模型
-│   ├── llm_model.py                   # LLM 模型
+│   ├── llm_model.py                   # LLM模型
+│   ├── llm_rag.py                     # RAG 模型
 │   ├── database_base.py               # 基礎數據庫操作模型
 │   ├── database_devOps.py             # 開發運維數據庫模型
 │   ├── database_userRecords.py        # 用戶記錄數據庫模型
@@ -48,6 +52,13 @@ project/
 │               ├── tmp/               # 臨時文件存儲
 │               ├── vector_store/      # 向量資料庫
 │   ├── output/                        # 儲存 retrieve 搜索到的文件 chunks
+│
+├── .env                               # 環境變數設定檔
+├── docker-compose.yml                 # Docker Compose配置檔
+├── login_config.yaml                  # 登錄配置檔
+├── CC17.db                            # SQLite資料庫
+├── netincome.db                       # SQLite資料庫
+├── requirements.txt                   # 套件清單
 ```
 ## 詳細說明
 

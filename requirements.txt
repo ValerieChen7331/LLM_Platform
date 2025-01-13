@@ -4,16 +4,14 @@ langgraph
 -U langchain-community
 pymssql
 cx_Oracle
+reportlab
+faiss-cpu
+langchain-openai
 
-# ----
-# charlie:
+
+# --- Charlie ---
 # langgraph==0.1.17
 # streamlit-authenticator==0.3.3
 
+# --- chroma 版本問題 ---
 # pip install -qU "langchain-chroma>=0.1.2"
-
-reportlab
-faiss-cpu
---upgrade langchain
-langchain-community
-langchain-openai
